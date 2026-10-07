@@ -2,6 +2,8 @@
 
 Claude writes the notes. Your OP-1 plays them on whatever sound you pick.
 
+**[Watch the 30-second teaser →](https://one-off.dev/op1-jam)**
+
 OP-1 Jam is a Mac app for the original [teenage engineering OP-1](https://teenage.engineering/products/op-1).
 Plug the OP-1 in over USB and Claude writes a short looping part — bass,
 chords, lead, arpeggio or drums. The app plays it into the OP-1, and whatever

@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>OP-1 Jam — teaser</title>
+<!--
+  Pass 3: the teaser's frames. Every frame is a pure function of its number:
+  window.renderFrame(f) places the camera, captions, cursor and glows for time
+  f / 60 and shows the app footage recorded for that moment (out/footage),
+  and the compositor screenshots it. Nothing here runs on real time.
+-->
+<style>
+  :root {
+    --orange: #ff5a1f;
+    --blue: #3b7bff;
+    --green: #19c37d;
+    --red: #ff3d4d;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #040405; }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: radial-gradient(120% 95% at 50% 38%, #14171d 0%, #08090c 58%, #030304 100%);
+    font-family: var(--sans);
+  }
+  #dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1.4px);
+    background-size: 30px 30px;
+  }
+  .glow { position: absolute; width: 1100px; height: 1100px; margin: -550px 0 0 -550px; border-radius: 50%; filter: blur(150px); opacity: 0; }
+  #tilt { position: absolute; inset: 0; transform-origin: 960px 540px; }
+  #cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #win {
+    position: relative; width: 1040px; border-radius: 14px; overflow: hidden; background: #e3e4e6;
+    box-shadow: 0 60px 160px rgba(0, 0, 0, 0.7), 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+  #bar {
+    position: relative; height: 38px; display: flex; align-items: center; gap: 8px; padding-left: 16px;
+    background: linear-gradient(#f0f0f2, #e1e2e5); border-bottom: 1px solid #c6c8cd;
+  }
+  .light { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2); }
+  #bar .title { position: absolute; left: 0; right: 0; text-align: center; font: 600 13px var(--sans); color: #4b4f56; }
+  #app { display: block; width: 1040px; }
+  #cursor { position: absolute; left: 0; top: 0; width: 26px; height: 36px; transform-origin: 3px 3px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+  #ripple { position: absolute; left: 0; top: 0; border-radius: 50%; border: 3px solid var(--orange); opacity: 0; }
+  #scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 620px; background: linear-gradient(to top, rgba(3, 3, 5, 0.97), rgba(3, 3, 5, 0.92) 32%, rgba(3, 3, 5, 0.6) 62%, rgba(3, 3, 5, 0)); }
+  #cap { position: absolute; left: 112px; right: 112px; bottom: 112px; }
+  #kicker { font: 600 22px var(--mono); letter-spacing: 0.2em; color: #b4bac4; margin-bottom: 20px; height: 26px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.95), 0 0 28px rgba(0, 0, 0, 0.8); }
+  #line { font-weight: 800; font-size: 96px; letter-spacing: -0.028em; line-height: 1.02; color: #fff; white-space: nowrap; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.75); }
+  .w { display: inline-block; overflow: hidden; vertical-align: bottom; padding: 0.04em 0.07em 0.14em 0; margin-bottom: -0.14em; }
+  .w > span { display: inline-block; }
+  #chips { position: absolute; inset: 0; }
+  .chip {
+    position: absolute; left: 0; top: 0; display: flex; align-items: baseline; gap: 12px;
+    padding: 12px 20px 12px 18px; border-radius: 999px; background: rgba(255, 255, 255, 0.96); color: #111317;
+    font: 800 30px var(--mono); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  }
+  .chip small { font: 700 14px var(--mono); letter-spacing: 0.16em; color: #6b7079; }
+  .chip i { width: 12px; height: 12px; border-radius: 50%; align-self: center; font-style: normal; }
+  #tag { position: absolute; left: 0; right: 0; top: 330px; text-align: center; color: #fff; font-weight: 800; font-size: 112px; letter-spacing: -0.03em; line-height: 1.08; }
+  #tag .row { white-space: nowrap; }
+  #end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #end img { width: 230px; height: 230px; margin-bottom: 18px; }
+  #end h1 { font-size: 132px; font-weight: 800; letter-spacing: -0.035em; color: #fff; line-height: 1; }
+  #end p { margin-top: 22px; font-size: 38px; font-weight: 500; color: #c9cdd4; letter-spacing: -0.01em; }
+  #end .pills { margin-top: 34px; font: 600 22px var(--mono); letter-spacing: 0.22em; color: #a3a9b3; }
+  #end .pills b { color: var(--orange); font-weight: 600; }
+  #fine { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font: 500 15px var(--sans); color: #6b7079; letter-spacing: 0.01em; opacity: 0; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(135% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.6) 100%); }
+  #grain { position: absolute; left: -256px; top: -256px; width: 2432px; height: 1592px; opacity: 0.07; mix-blend-mode: overlay; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="dots"></div>
+  <div class="glow" id="g-orange"></div>
+  <div class="glow" id="g-blue"></div>
+  <div class="glow" id="g-red"></div>
+  <div class="glow" id="g-green"></div>
+  <div id="tilt">
+    <div id="cam">
+      <div id="win">
+        <div id="bar">
+          <span class="light" style="background:#ff5f57"></span>
+          <span class="light" style="background:#febc2e"></span>
+          <span class="light" style="background:#28c840"></span>
+          <span class="title">OP-1 Jam</span>
+        </div>
+        <img id="app" alt="" />
+        <div id="ripple"></div>
+        <svg id="cursor" viewBox="0 0 26 36" aria-hidden="true">
+          <path d="M3 3 L3 29 L9.5 23 L13.8 32.6 L18.2 30.7 L14 21.4 L22.6 21.4 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div id="scrim"></div>
+  <div id="chips"></div>
+  <div id="cap"><div id="kicker"></div><div id="line"></div></div>
+  <div id="tag"></div>
+  <div id="end">
+    <img src="out/icon.png" alt="" />
+    <h1>OP-1 Jam</h1>
+    <p>Plug in. Press play. Jam with Claude.</p>
+    <div class="pills">FREE <b>·</b> OPEN SOURCE <b>·</b> MACOS</div>
+  </div>
+  <div id="fine">OP-1 is a trademark of teenage engineering. Not affiliated with teenage engineering or Anthropic. Claude’s replies are sped up for this video. © 2026 One-Off Dev Inc. · MIT licensed</div>
+  <div id="vignette"></div>
+  <canvas id="grain" width="2432" height="1592"></canvas>
+  <div id="flash"></div>
+</div>
+<script>
+(async () => {
+  const data = await (await fetch("out/data.json")).json();
+  const FPS = 60;
+  const TB = 38; // title bar
+  const APP_W = data.viewport.width;
+  const APP_H = data.viewport.height;
+  const $ = (id) => document.getElementById(id);
+  const app = $("app");
+  app.style.height = `${APP_H}px`;
+
+  /* --- easing -------------------------------------------------------------- */
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const inOut = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+  const outExpo = (u) => (u >= 1 ? 1 : 1 - Math.pow(2, -10 * u));
+  const outBack = (u) => { const c1 = 1.6, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+
+  /* --- footage and its layout -------------------------------------------- */
+  const frameAt = (t) => clamp(Math.floor(t * data.fps + 1e-6), 0, data.rects.length - 1);
+  function rect(name, t) {
+    if (name === "window") return { x: 0, y: 0, w: APP_W, h: APP_H + TB };
+    const r = data.rects[frameAt(t)][name];
+    return { x: r[0], y: r[1] + TB, w: r[2], h: r[3] };
+  }
+  function union(names, t, pad) {
+    const rs = names.map((n) => rect(n, t));
+    const x0 = Math.min(...rs.map((r) => r.x)) - pad, y0 = Math.min(...rs.map((r) => r.y)) - pad;
+    const x1 = Math.max(...rs.map((r) => r.x + r.w)) + pad, y1 = Math.max(...rs.map((r) => r.y + r.h)) + pad;
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  /* --- the shots --------------------------------------------------------- */
+  const TOP = { x: 90, y: 64, w: 1740, h: 690 }; // above the captions
+  const shots = [
+    { t: 0, names: ["window"], box: { x: 560, y: 70, w: 800, h: 900 }, pad: 0 },
+    { t: 1.0, names: ["connect", "transport"], box: TOP, pad: 26 },
+    { t: 2.15, names: ["transport", "screen"], box: TOP, pad: 24 },
+    { t: 4.0, names: ["screen"], box: TOP, pad: 18, punch: 0.07, flash: 0.55, shake: 7 },
+    { t: 8.0, names: ["screen", "from"], box: TOP, pad: 22 },
+    { t: 10.0, names: ["status", "claude", "from"], box: TOP, pad: 22 },
+    { t: 12.0, names: ["screen", "status"], box: TOP, pad: 22, punch: 0.035, flash: 0.14 },
+    { t: 14.0, names: ["claude", "from", "tape"], box: TOP, pad: 22 },
+    { t: 16.0, names: ["screen", "status"], box: TOP, pad: 20, punch: 0.055, flash: 0.32, shake: 4 },
+    { t: 18.9, names: ["claude", "tape"], box: TOP, pad: 22 },
+    { t: 20.0, names: ["screen", "from"], box: TOP, pad: 22, punch: 0.055, flash: 0.32, shake: 4 },
+    { t: 24.0, names: ["window"], box: { x: 200, y: 56, w: 1520, h: 930 }, pad: 0 },
+  ];
+  const MAX_SCALE = 2.0; // the footage is 2x
+  for (let i = 0; i < shots.length; i++) {
+    const s = shots[i];
+    const end = i + 1 < shots.length ? shots[i + 1].t : 30;
+    // Frame what the shot will hold by its end, so growing content stays in.
+    const r = union(s.names, Math.max(s.t, end - 0.25), s.pad);
+    s.end = end;
+    s.scale = Math.min(MAX_SCALE, s.box.w / r.w, s.box.h / r.h);
+    s.cx = r.x + r.w / 2;
+    s.cy = r.y + r.h / 2;
+    s.sx = s.box.x + s.box.w / 2;
+    s.sy = s.box.y + s.box.h / 2;
+  }
+  const kickEnv = (t, tau = 0.11) => {
+    let v = 0;
+    for (const k of data.kicks) if (k <= t && t - k < 0.6) v = Math.max(v, Math.exp(-(t - k) / tau));
+    return v;
+  };
+  const bassEnv = (t) => {
+    let v = 0;
+    for (const k of data.bassOn) if (k <= t && t - k < 0.5) v = Math.max(v, Math.exp(-(t - k) / 0.12));
+    return v;
+  };
+
+  function camera(t) {
+    let i = shots.length - 1;
+    while (i > 0 && t < shots[i].t - 0.32) i--;
+    const s = shots[i];
+    let { cx, cy, scale, sx, sy } = s;
+    // Hold: a slow push-in.
+    scale *= 1 + 0.03 * prog(t, s.t, s.end);
+    // Move in from the previous shot, landing just after the downbeat.
+    if (i > 0 && t < s.t + 0.22) {
+      const p = shots[i - 1];
+      const u = inOut(prog(t, s.t - 0.32, s.t + 0.22));
+      const pScale = p.scale * 1.03;
+      cx = lerp(p.cx, cx, u);
+      cy = lerp(p.cy, cy, u);
+      sx = lerp(p.sx, sx, u);
+      sy = lerp(p.sy, sy, u);
+      scale = Math.exp(lerp(Math.log(pScale), Math.log(scale), u));
+    }
+    // Punches, shakes and the beat.
+    for (const sh of shots) {
+      if (sh.punch && t >= sh.t) scale *= 1 + sh.punch * Math.exp(-(t - sh.t) / 0.17);
+      if (sh.shake && t >= sh.t && t < sh.t + 0.8) {
+        const a = sh.shake * Math.exp(-(t - sh.t) / 0.16);
+        sx += a * Math.sin(t * 91);
+        sy += a * Math.cos(t * 77);
+      }
+    }
+    scale *= 1 + 0.006 * kickEnv(t);
+    return { tx: sx - scale * cx, ty: sy - scale * cy, scale };
+  }
+
+  /* --- captions ----------------------------------------------------------- */
+  const caps = [
+    { a: 0.25, b: 1.95, k: "[ 01 · CONNECT ]", text: "Plug in your *OP-1.*", c: "var(--orange)" },
+    { a: 2.1, b: 3.85, k: "[ 02 · CLAUDE WRITES ]", text: "*Claude* writes the notes.", c: "var(--orange)" },
+    { a: 4.05, b: 5.9, k: "[ 03 · YOUR OP-1 PLAYS ]", text: "Your *OP-1* plays them.", c: "var(--blue)" },
+    { a: 6.0, b: 7.85, k: "[ ANY SOUND YOU PICK ]", text: "On whatever *sound* you pick.", c: "var(--blue)" },
+    { a: 8.05, b: 9.9, k: "[ 04 · YOU PLAY ]", text: "*Play along* on the keys…", c: "var(--green)" },
+    { a: 10.05, b: 11.9, k: "[ 05 · CLAUDE LISTENS ]", text: "…and *Claude* answers.", c: "var(--orange)" },
+    { a: 12.05, b: 13.9, k: "[ THE NEXT LOOP ]", text: "Right on the *next loop.*", c: "var(--blue)" },
+    { a: 14.05, b: 15.9, k: "[ 06 · RECORD ]", text: "Put it on *tape.*", c: "var(--green)" },
+    { a: 16.05, b: 18.85, k: "[ 07 · LAYER ]", text: "Then add *drums.*", c: "var(--red)" },
+    { a: 19.0, b: 21.85, k: "[ 07 · LAYER ]", text: "And *chords.*", c: "var(--green)" },
+    { a: 22.0, b: 23.9, k: "[ AROUND THE TAPE ]", text: "Claude writes around *what’s on tape.*", c: "var(--green)", size: 84 },
+    { a: 24.05, b: 25.9, k: "[ OP-1 JAM ]", text: "Free. Open source. *On your Mac.*", c: "var(--orange)" },
+  ];
+  function words(text, color) {
+    // *accent* spans; returns [{w, accent}]
+    const out = [];
+    let accent = false;
+    for (const tok of text.split(/(\*)/)) {
+      if (tok === "*") { accent = !accent; continue; }
+      for (const w of tok.split(" ").filter(Boolean)) out.push({ w, accent });
+    }
+    return out.map(({ w, accent }) => `<span class="w"><span${accent ? ` style="color:${color}"` : ""}>${w}</span></span>`).join(" ");
+  }
+  let shownCap = -1;
+  function captions(t) {
+    const i = caps.findIndex((c) => t >= c.a - 0.001 && t < c.b);
+    const line = $("line"), kicker = $("kicker");
+    if (i !== shownCap) {
+      shownCap = i;
+      line.innerHTML = i < 0 ? "" : words(caps[i].text, caps[i].c);
+      line.style.fontSize = `${i < 0 ? 96 : caps[i].size ?? 96}px`;
+      kicker.textContent = i < 0 ? "" : caps[i].k;
+    }
+    if (i < 0) return;
+    const c = caps[i];
+    const inner = [...line.querySelectorAll(".w > span")];
+    inner.forEach((el, j) => {
+      const u = outExpo(prog(t, c.a + j * 0.055, c.a + j * 0.055 + 0.5));
+      const out = inOut(prog(t, c.b - 0.22, c.b));
+      el.style.transform = `translateY(${(1 - u) * 110 - out * 110}%)`;
+    });
+    kicker.style.opacity = String(prog(t, c.a, c.a + 0.2) * (1 - prog(t, c.b - 0.2, c.b)));
+    kicker.style.transform = `translateX(${(1 - outExpo(prog(t, c.a, c.a + 0.4))) * -24}px)`;
+  }
+
+  /* --- the cursor ---------------------------------------------------------- */
+  const clicks = data.clicks.map((c) => {
+    const r = rect(c.name, c.t);
+    return { t: c.t, x: r.x + r.w * 0.55, y: r.y + r.h * 0.58 };
+  });
+  function cursor(t) {
+    let pos = { x: APP_W * 0.82, y: 520 };
+    let pressed = 0, ripple = -1;
+    let prev = pos, prevT = 0;
+    for (const c of clicks) {
+      const dur = Math.min(0.5, (c.t - prevT) * 0.8);
+      const u = inOut(prog(t, c.t - dur - 0.05, c.t - 0.05));
+      // A slight arc, like a hand.
+      const arc = Math.sin(u * Math.PI) * 26;
+      pos = { x: lerp(prev.x, c.x, u), y: lerp(prev.y, c.y, u) - arc };
+      if (t >= c.t && t < c.t + 0.14) pressed = 1;
+      if (t >= c.t && t < c.t + 0.45) ripple = (t - c.t) / 0.45;
+      if (t < c.t) break;
+      prev = { x: c.x, y: c.y };
+      prevT = c.t;
+    }
+    const cur = $("cursor");
+    cur.style.transform = `translate(${pos.x - 3}px, ${pos.y - 3}px) scale(${pressed ? 0.86 : 1})`;
+    const rip = $("ripple");
+    if (ripple >= 0) {
+      const rad = 6 + 34 * outExpo(ripple);
+      rip.style.opacity = String(0.9 * (1 - ripple));
+      rip.style.width = rip.style.height = `${rad * 2}px`;
+      rip.style.transform = `translate(${pos.x - rad}px, ${pos.y - rad}px)`;
+    } else rip.style.opacity = "0";
+  }
+
+  /* --- OP-1 key chips ------------------------------------------------------- */
+  const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+  const DRUM = { [data.kit.kick]: "KICK", [data.kit.snare]: "SNARE", [data.kit.hat]: "HAT", [data.kit.open]: "OPEN HAT" };
+  const chipEls = data.played.map((p, i) => {
+    const el = document.createElement("div");
+    el.className = "chip";
+    const label = p.drum ? DRUM[p.note] : `${NAMES[p.note % 12]}${Math.floor(p.note / 12) - 1}`;
+    const dot = p.drum ? "var(--red)" : "var(--green)";
+    el.innerHTML = `<i style="background:${dot}"></i>${label}<small>OP-1 KEY</small>`;
+    el.style.opacity = "0";
+    $("chips").appendChild(el);
+    return el;
+  });
+  // A notification stack: each new key lands at the bottom and pushes the
+  // ones before it up.
+  const LIFE = 1.1;
+  function chips(t) {
+    data.played.forEach((p, i) => {
+      const el = chipEls[i];
+      const age = t - p.t;
+      if (age < 0 || age > LIFE) { el.style.opacity = "0"; return; }
+      let lift = age * 18;
+      for (let j = i + 1; j < data.played.length && data.played[j].t <= t; j++) {
+        lift += 70 * outExpo(clamp((t - data.played[j].t) / 0.2));
+      }
+      const pop = outBack(clamp(age / 0.26));
+      el.style.opacity = String(clamp(age / 0.05) * (1 - prog(age, LIFE - 0.3, LIFE)));
+      el.style.transform = `translate(${1560}px, ${650 - lift}px) scale(${0.6 + 0.4 * pop})`;
+    });
+  }
+
+  /* --- glows ----------------------------------------------------------------- */
+  const glowPos = { "g-orange": [960, 560], "g-blue": [380, 330], "g-red": [1580, 820], "g-green": [1540, 260] };
+  for (const [id, [x, y]] of Object.entries(glowPos)) {
+    const el = $(id);
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.background = `var(--${id.slice(2)})`;
+  }
+  function glows(t) {
+    const sect = (a, b) => prog(t, a - 0.25, a + 0.25) * (1 - prog(t, b - 0.25, b + 0.25));
+    const k = kickEnv(t, 0.14);
+    const b = bassEnv(t);
+    const v = {
+      "g-orange": 0.18 + 0.32 * prog(t, 0, 3.9) * (1 - prog(t, 4.0, 4.6)) + 0.5 * prog(t, 27.6, 28.2),
+      "g-blue": sect(4, 30) * (0.34 + 0.16 * b) * (1 - 0.35 * prog(t, 16, 17)),
+      "g-red": sect(16, 30) * (0.3 + 0.28 * k),
+      "g-green": sect(20, 30) * (0.3 + 0.22 * k),
+    };
+    for (const [id, o] of Object.entries(v)) $(id).style.opacity = String(clamp(o * (1 - 0.6 * prog(t, 28.0, 28.4))));
+  }
+
+  /* --- grain --------------------------------------------------------------- */
+  {
+    const g = $("grain").getContext("2d");
+    const img = g.createImageData(2432, 1592);
+    let s = 7;
+    for (let i = 0; i < img.data.length; i += 4) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      const v = (s >>> 16) & 255; // the low bits of this generator repeat every 256
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  }
+
+  /* --- one frame -------------------------------------------------------------- */
+  let lastFootage = -1;
+  window.renderFrame = async (f) => {
+    const t = f / FPS;
+
+    const fi = frameAt(t);
+    if (fi !== lastFootage) {
+      lastFootage = fi;
+      app.src = `out/footage/f${String(fi).padStart(4, "0")}.jpg`;
+      await app.decode();
+    }
+
+    // Camera.
+    const cam = camera(t);
+    $("cam").style.transform = `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.scale})`;
+
+    // The window: in from below at the start, a 3D turn at the end, then away.
+    const intro = outExpo(prog(t, 0, 1.15));
+    const turn = inOut(prog(t, 24, 25.6));
+    const away = inOut(prog(t, 25.9, 26.9));
+    const rx = (1 - intro) * 34 + turn * 7 - away * 4;
+    const ry = turn * -10 + away * 6;
+    const ty = (1 - intro) * 300;
+    const sc = 1 - away * 0.42;
+    $("tilt").style.transform = `perspective(2200px) translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
+    const gone = prog(t, 27.85, 28.05);
+    $("tilt").style.opacity = String(intro * (1 - away * 0.62) * (1 - gone));
+    $("tilt").style.filter = away > 0 ? `blur(${away * 9}px)` : "none";
+
+    // Overlays.
+    captions(t);
+    cursor(t);
+    chips(t);
+    glows(t);
+    $("scrim").style.opacity = String(1 - prog(t, 25.9, 26.4));
+
+    // Tagline over the receding window.
+    const tag = $("tag");
+    if (t >= 26.0 && t < 28.0) {
+      if (!tag.dataset.on) {
+        tag.dataset.on = "1";
+        tag.innerHTML = `<div class="row">${words("Claude writes the notes.", "#fff")}</div><div class="row">${words("Your *OP-1* plays them.", "var(--orange)")}</div>`;
+      }
+      [...tag.querySelectorAll(".w > span")].forEach((el, j) => {
+        const u = outExpo(prog(t, 26.05 + j * 0.06, 26.6 + j * 0.06));
+        el.style.transform = `translateY(${(1 - u) * 110}%)`;
+      });
+      tag.style.opacity = String(1 - prog(t, 27.8, 28.0));
+    } else {
+      tag.style.opacity = "0";
+    }
+
+    // End card on the final hit.
+    const end = $("end");
+    const e = prog(t, 28.0, 28.6);
+    end.style.opacity = String(clamp(prog(t, 28.0, 28.12)));
+    const icon = end.querySelector("img");
+    icon.style.transform = `scale(${0.35 + 0.65 * outBack(e)}) rotate(${(1 - outExpo(e)) * -12}deg)`;
+    const rise = (a) => `translateY(${(1 - outExpo(prog(t, a, a + 0.55))) * 46}px)`;
+    const fade = (a) => String(prog(t, a, a + 0.3));
+    for (const [el, a] of [[end.querySelector("h1"), 28.12], [end.querySelector("p"), 28.3], [end.querySelector(".pills"), 28.45]]) {
+      el.style.transform = rise(a);
+      el.style.opacity = fade(a);
+    }
+    $("fine").style.opacity = String(0.9 * prog(t, 28.55, 28.9));
+
+    // Flashes on the drops and the final hit.
+    let flash = 0;
+    for (const sh of shots) if (sh.flash && t >= sh.t) flash = Math.max(flash, sh.flash * Math.exp(-(t - sh.t) / 0.09));
+    if (t >= 28.0) flash = Math.max(flash, 0.75 * Math.exp(-(t - 28.0) / 0.12));
+    $("flash").style.opacity = String(flash);
+
+    // Grain moves every frame.
+    $("grain").style.transform = `translate(${((f * 137) % 256) - 128}px, ${((f * 89) % 256) - 128}px)`;
+  };
+  window.ready = true;
+})();
+</script>
+</body>
+</html>

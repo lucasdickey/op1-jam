@@ -17,7 +17,8 @@
     "test:prompt": "node --experimental-strip-types --no-warnings tests/prompt.test.ts",
     "test:app": "electron-vite build && node tests/app.test.mjs",
     "dist": "electron-vite build && electron-builder --mac --publish never",
-    "icon": "node scripts/make-icon.mjs"
+    "icon": "node scripts/make-icon.mjs",
+    "teaser": "electron-vite build && node promo/record.mjs && node promo/audio.mjs && node promo/compose.mjs"
   },
   "dependencies": {
     "ai": "^7.0.112",
