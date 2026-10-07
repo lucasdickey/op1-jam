@@ -1,0 +1,41 @@
+{
+  "name": "op1-jam",
+  "productName": "OP-1 Jam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude writes the notes, your OP-1 plays them. A Mac app that loops Claude-written parts into a teenage engineering OP-1 over USB MIDI.",
+  "author": "Lucas Dickey <lucas@lucasdickey.com> (One-Off Dev Inc.)",
+  "license": "MIT",
+  "repository": "github:lucasdickey/op1-jam",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "npm run test:prompt && npm run test:app",
+    "test:prompt": "node --experimental-strip-types --no-warnings tests/prompt.test.ts",
+    "test:app": "electron-vite build && node tests/app.test.mjs",
+    "dist": "electron-vite build && electron-builder --mac --publish never",
+    "icon": "node scripts/make-icon.mjs"
+  },
+  "dependencies": {
+    "ai": "^7.0.112",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "playwright-core": "^1.61.0",
+    "sharp": "^0.35.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7"
+  }
+}

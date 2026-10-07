@@ -1,0 +1,25 @@
+# Packs out/ (from `electron-vite build`) into a Mac app and a .dmg.
+appId: dev.oneoff.op1jam
+productName: OP-1 Jam
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+mac:
+  category: public.app-category.music
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  # Ad-hoc signature: enough for macOS to run it, not an Apple Developer ID.
+  # The first launch needs right-click → Open (see README.md). The hardened
+  # runtime is for notarised apps; with an ad-hoc signature it stops the app
+  # from launching, so it's off until there's a Developer ID to notarise with.
+  identity: "-"
+  hardenedRuntime: false
+  extendInfo:
+    NSHumanReadableCopyright: "One-off by Lucas Dickey"
+dmg:
+  title: "OP-1 Jam"

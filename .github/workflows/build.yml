@@ -1,0 +1,55 @@
+name: Build
+
+# On every push and pull request: type check, the tests (the prompt, and the
+# real app driven with a stand-in OP-1 and a stand-in Claude), then the
+# .dmg files for Apple silicon and Intel, kept on the run as a download.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build the .dmg files
+        run: npm run dist
+        env:
+          # Ad-hoc signed (electron-builder.yml): don't look for a Developer ID.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Check what was built
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r app; do
+            found=$((found + 1))
+            codesign --verify --verbose "$app"
+            lipo -info "$app/Contents/MacOS/OP-1 Jam"
+          done < <(find dist -maxdepth 2 -name "OP-1 Jam.app")
+          [ "$found" -eq 2 ]
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: op1-jam-dmg
+          path: dist/*.dmg
+          if-no-files-found: error

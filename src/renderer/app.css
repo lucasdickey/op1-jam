@@ -1,0 +1,65 @@
+/* The app's own pieces, in the page's palette (tokens from op1.css). */
+
+/* op1.css's font stack starts with --font-geist-mono, a name it was first
+   written for. Undefined, that entry would void the whole stack, so it names
+   the Mac's own monospace. */
+:root {
+  --font-geist-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.km-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 11, 13, 0.45);
+}
+
+.km-panel {
+  width: min(520px, 100%);
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+}
+
+.km-title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.km-text {
+  margin: 0 0 10px;
+  color: var(--op-dim);
+}
+
+.km-input {
+  width: 100%;
+  font: inherit;
+  color: var(--op-ink);
+  background: var(--op-ground);
+  border: 1px solid var(--op-rule);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.km-input:focus-visible {
+  outline: 2px solid var(--op-blue);
+  outline-offset: 2px;
+}
+
+.km-error {
+  margin: -4px 0 12px;
+}
+
+.km-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.km-remove {
+  margin-left: auto;
+}

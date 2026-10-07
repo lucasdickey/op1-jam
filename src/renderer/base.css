@@ -1,0 +1,99 @@
+/*
+ * The resets the page was designed on. On the website they come from
+ * Tailwind's preflight (via app/globals.css); the app doesn't run Tailwind,
+ * so these are the preflight rules op1.css relies on, copied as plain CSS.
+ * Tailwind CSS is MIT licensed.
+ */
+
+*,
+::after,
+::before,
+::backdrop {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1em;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  vertical-align: middle;
+}
+
+button,
+input,
+select,
+optgroup,
+textarea {
+  font: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  border-radius: 0;
+  background-color: transparent;
+  opacity: 1;
+}
+
+::placeholder {
+  opacity: 1;
+  color: color-mix(in oklab, currentcolor 50%, transparent);
+}
+
+textarea {
+  resize: vertical;
+}
+
+button,
+input:where([type="button"], [type="reset"], [type="submit"]) {
+  appearance: button;
+}
+
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none !important;
+}

@@ -1,0 +1,828 @@
+/*
+ * OP-1 jam palette — this one-off only.
+ *
+ * Borrowed from the instrument it drives: a brushed-aluminium grey body, a
+ * black screen where the loop is drawn, and the four encoder colours (blue,
+ * green, white, orange) as the only accents. Each part gets one of them on the
+ * screen, so a glance says which part is playing. Scoped under
+ * [data-site="op1"], set on <html> by this one-off's root layout.
+ *
+ * Tokens are declared on the bare selector first and only re-pointed inside
+ * the media query and the [data-theme] stamp, so the un-stamped state always
+ * resolves to a complete set.
+ */
+
+[data-site="op1"] {
+  --op-ground: #e3e4e6;
+  --op-panel: #f1f1f2;
+  --op-ink: #1c1e21;
+  --op-dim: #686c74;
+  --op-rule: #c7c9ce;
+  --op-key: #fbfbfb;
+  --op-key-ink: #1c1e21;
+  --op-key-shadow: 0 1px 0 #b9bcc2, 0 2px 4px rgba(20, 22, 26, 0.12);
+  --op-warn-ink: #b3361a;
+
+  --op-blue: #2f6fea;
+  --op-green: #12a364;
+  --op-white: #eceae4;
+  --op-orange: #ff5a1f;
+  --op-red: #ff3d4d;
+
+  /* The screen is black in both themes, like the device's. */
+  --op-screen: #0a0b0d;
+  --op-screen-ink: #c9ced6;
+  --op-screen-dim: #5f6570;
+  --op-screen-beat: #16191e;
+  --op-screen-bar: #2a2e36;
+
+  --op-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-site="op1"]:not([data-theme="light"]) {
+    --op-ground: #121316;
+    --op-panel: #1a1c20;
+    --op-ink: #e4e6ea;
+    --op-dim: #8e939c;
+    --op-rule: #2c2f35;
+    --op-key: #262a30;
+    --op-key-ink: #e4e6ea;
+    --op-key-shadow: 0 1px 0 #0b0c0e, 0 2px 4px rgba(0, 0, 0, 0.4);
+    --op-warn-ink: #ff8a6b;
+  }
+}
+
+[data-site="op1"][data-theme="dark"] {
+  --op-ground: #121316;
+  --op-panel: #1a1c20;
+  --op-ink: #e4e6ea;
+  --op-dim: #8e939c;
+  --op-rule: #2c2f35;
+  --op-key: #262a30;
+  --op-key-ink: #e4e6ea;
+  --op-key-shadow: 0 1px 0 #0b0c0e, 0 2px 4px rgba(0, 0, 0, 0.4);
+  --op-warn-ink: #ff8a6b;
+}
+
+/* --- page ---------------------------------------------------------------- */
+
+.op-body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--op-ground);
+  color: var(--op-ink);
+  font-family: var(--op-mono);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.op-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+.op-head {
+  margin-bottom: 20px;
+}
+
+.op-tag {
+  color: var(--op-dim);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.op-title {
+  margin: 6px 0 8px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.op-note {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--op-dim);
+}
+
+.op-jam {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.op-panel {
+  background: var(--op-panel);
+  border: 1px solid var(--op-rule);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.op-h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--op-dim);
+}
+
+.op-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.op-row > p {
+  margin: 0;
+}
+
+.op-dim {
+  color: var(--op-dim);
+}
+
+.op-dim:is(p) {
+  margin: 8px 0 0;
+}
+
+.op-warn {
+  margin: 0;
+  color: var(--op-warn-ink);
+}
+
+/* --- keys and fields ------------------------------------------------------ */
+
+.op-key {
+  appearance: none;
+  border: 1px solid var(--op-rule);
+  border-radius: 8px;
+  background: var(--op-key);
+  color: var(--op-key-ink);
+  box-shadow: var(--op-key-shadow);
+  font: inherit;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+  position: relative;
+  padding-left: 30px;
+}
+
+/* A dot in the key's corner, like the encoder it borrows its colour from. */
+.op-key::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--op-dot, var(--op-dim));
+}
+
+.op-key-blue {
+  --op-dot: var(--op-blue);
+}
+.op-key-green {
+  --op-dot: var(--op-green);
+}
+.op-key-orange {
+  --op-dot: var(--op-orange);
+}
+.op-key-white {
+  --op-dot: var(--op-white);
+}
+.op-key-white::before {
+  box-shadow: 0 0 0 1px var(--op-rule);
+}
+
+.op-key:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.op-key:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.op-play {
+  min-width: 108px;
+  padding-left: 16px;
+}
+.op-play::before {
+  display: none;
+}
+.op-play[data-on="true"] {
+  background: var(--op-orange);
+  border-color: var(--op-orange);
+  color: #fff;
+}
+
+.op-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.op-field > span:first-child,
+.op-label {
+  color: var(--op-dim);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.op-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.op-jam select,
+.op-jam input[type="number"],
+.op-jam textarea {
+  font: inherit;
+  color: var(--op-ink);
+  background: var(--op-ground);
+  border: 1px solid var(--op-rule);
+  border-radius: 6px;
+  padding: 6px 8px;
+  max-width: 100%;
+}
+
+.op-jam textarea {
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.op-ports select {
+  max-width: min(260px, 70vw);
+}
+
+.op-tempo input[type="range"] {
+  width: 140px;
+  accent-color: var(--op-blue);
+}
+
+.op-tempo input[type="number"] {
+  width: 4.5em;
+}
+
+.op-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.op-check input {
+  accent-color: var(--op-green);
+}
+
+.op-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.op-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.op-seg {
+  appearance: none;
+  font: inherit;
+  color: var(--op-ink);
+  background: var(--op-key);
+  border: 1px solid var(--op-rule);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.op-seg[aria-checked="true"] {
+  background: var(--op-ink);
+  border-color: var(--op-ink);
+  color: var(--op-panel);
+}
+
+.op-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--op-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.op-jam :focus-visible {
+  outline: 2px solid var(--op-blue);
+  outline-offset: 2px;
+}
+
+/* --- parts and their colours ---------------------------------------------- */
+
+[data-site="op1"] [data-part="bass"] {
+  --op-part: var(--op-blue);
+}
+[data-site="op1"] [data-part="chords"] {
+  --op-part: var(--op-green);
+}
+[data-site="op1"] [data-part="lead"] {
+  --op-part: var(--op-white);
+}
+[data-site="op1"] [data-part="arpeggio"] {
+  --op-part: var(--op-orange);
+}
+[data-site="op1"] [data-part="drums"] {
+  --op-part: var(--op-red);
+}
+
+.op-seg[data-part]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  background: var(--op-part);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* --- the screen ------------------------------------------------------------ */
+
+.op-screen {
+  --playhead: -1;
+  --name-w: 3rem;
+  background: var(--op-screen);
+  color: var(--op-screen-ink);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  min-height: 150px;
+  box-shadow: inset 0 0 0 1px #000, 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.op-screen-empty {
+  margin: 0;
+  min-height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--op-screen-dim);
+}
+
+/* Four bars of sixteenths fits a phone at 4px a step; anything narrower
+   scrolls inside the screen rather than pushing the page sideways. */
+.op-roll-scroll {
+  overflow-x: auto;
+}
+
+/* A few lanes stretch to fill the screen; many shrink to 14px each. */
+.op-roll {
+  position: relative;
+  min-width: calc(var(--name-w) + var(--steps) * 4px);
+  min-height: 124px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.op-lane {
+  display: flex;
+  align-items: stretch;
+  flex: 1 0 14px;
+  max-height: 26px;
+}
+
+.op-lane-name {
+  flex: 0 0 var(--name-w);
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  color: var(--op-screen-dim);
+}
+
+.op-lane-track {
+  position: relative;
+  flex: 1;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--op-screen-bar) 0 1px,
+      transparent 1px calc(100% * 16 / var(--steps))
+    ),
+    repeating-linear-gradient(
+      to right,
+      var(--op-screen-beat) 0 1px,
+      transparent 1px calc(100% * 4 / var(--steps))
+    );
+}
+
+.op-hit {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: calc(var(--at) / var(--steps) * 100%);
+  width: calc(var(--len) / var(--steps) * 100% - 2px);
+  min-width: 3px;
+  border-radius: 2px;
+  background: var(--op-part, var(--op-white));
+}
+
+.op-playhead-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--name-w);
+  right: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.op-playhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: calc(var(--playhead) / var(--steps) * 100%);
+  width: calc(100% / var(--steps));
+  background: rgba(255, 255, 255, 0.09);
+  border-left: 2px solid var(--op-orange);
+  opacity: 0;
+}
+
+.op-screen[data-playing="true"] .op-playhead {
+  opacity: 1;
+}
+
+.op-status {
+  margin: 0;
+  min-height: 1.5em;
+  padding: 0 4px;
+}
+
+.op-busy {
+  animation: op-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes op-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-busy {
+    animation: none;
+  }
+}
+
+/* --- the lower panels ------------------------------------------------------ */
+
+.op-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 760px) {
+  .op-columns {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.op-heard {
+  margin: 0;
+  word-spacing: 0.4em;
+  overflow-wrap: anywhere;
+}
+
+.op-drums {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.op-drums p {
+  margin: 0;
+}
+
+.op-tape {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.op-tape li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.op-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--op-part);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* --- small hints and key names ------------------------------------------ */
+
+.op-hint a {
+  color: var(--op-blue);
+  text-underline-offset: 2px;
+}
+
+.op-hint {
+  margin: 10px 0 0;
+  max-width: 80ch;
+}
+
+/* OP-1 key names, drawn as small keycaps. */
+.op-body kbd {
+  display: inline-block;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 0 5px;
+  border: 1px solid var(--op-rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--op-key);
+  color: var(--op-key-ink);
+}
+
+/* --- out / in lights ------------------------------------------------------ */
+
+.op-lights {
+  display: inline-flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--op-dim);
+}
+
+.op-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.op-light::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--op-rule);
+  transition: background-color 60ms linear, box-shadow 60ms linear;
+}
+
+.op-lights[data-out="true"] .op-light-out::before {
+  background: var(--op-orange);
+  box-shadow: 0 0 6px var(--op-orange);
+}
+
+.op-lights[data-in="true"] .op-light-in::before {
+  background: var(--op-green);
+  box-shadow: 0 0 6px var(--op-green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-light::before {
+    transition: none;
+  }
+}
+
+/* --- getting started: one step per card ----------------------------------- */
+
+.op-steps {
+  padding: 16px 18px 14px;
+}
+
+.op-steps-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.op-steps-top .op-h2 {
+  margin: 0;
+}
+
+/* All cards share one cell; only the current one shows. The cell takes the
+   tallest card's height, so every card is the same height at any width. */
+.op-slides {
+  display: grid;
+}
+
+.op-slide {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 10px 0 4px;
+}
+
+.op-slide-on {
+  visibility: visible;
+  animation: op-slide-in 180ms ease-out;
+}
+
+@keyframes op-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+.op-slide-num {
+  min-width: 1.2ch;
+  font-size: 64px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--op-orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.op-slide-title {
+  margin: 4px 0 12px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.op-slide-tag {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border: 1px solid var(--op-rule);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--op-dim);
+  vertical-align: middle;
+}
+
+.op-slide-points {
+  margin: 0;
+  padding-left: 1.2em;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+  max-width: 60ch;
+}
+
+.op-slide-points li::marker {
+  color: var(--op-orange);
+}
+
+.op-ok {
+  color: var(--op-green);
+  font-weight: 600;
+}
+
+.op-steps-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.op-seg:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.op-seg-next {
+  background: var(--op-ink);
+  border-color: var(--op-ink);
+  color: var(--op-panel);
+}
+
+.op-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* A 24px target around a 10px dot. Optional steps are hollow. */
+.op-dot {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.op-dot::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--op-rule);
+}
+
+.op-dot[data-optional="true"]::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--op-rule);
+}
+
+.op-dot[aria-current="step"]::before {
+  background: var(--op-orange);
+  box-shadow: none;
+  width: 12px;
+  height: 12px;
+}
+
+.op-help {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--op-rule);
+}
+
+.op-fixes {
+  margin: 10px 0 0;
+  padding-left: 1.2em;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 75ch;
+}
+
+.op-steps-shown-again {
+  text-align: right;
+}
+
+.op-steps-nav .op-seg {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  /* Dots get their own row above Back and Next, so neither wraps. */
+  .op-steps-nav {
+    flex-wrap: wrap;
+  }
+  .op-dots {
+    order: -1;
+    width: 100%;
+  }
+  .op-slide {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .op-slide-num {
+    font-size: 40px;
+  }
+  .op-slide-title {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-slide-on {
+    animation: none;
+  }
+}
+
+/* Read aloud, not shown: which step is up. */
+.op-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
