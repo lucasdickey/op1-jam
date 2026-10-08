@@ -7,7 +7,7 @@
 // is needed. On a Mac the key handlers are stubbed too, so the test never
 // touches your Keychain; elsewhere the real encrypted storage is exercised.
 
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -264,6 +264,9 @@ check("and turns off again", await until(async () => (await page.getByRole("regi
 
 check("no page errors", problems.length === 0, problems.slice(0, 2).join(" | "));
 await app.close();
+// A failed run keeps its Debug Mode capture (the hum take's mic readings) for
+// CI to upload, so a take that went wrong there can be replayed here.
+if (fails && existsSync(join(userData, "debug"))) cpSync(join(userData, "debug"), join(ROOT, "test-results"), { recursive: true });
 rmSync(userData, { recursive: true, force: true });
 console.log(fails ? `\n${fails} FAILED` : "\nall passed");
 process.exit(fails ? 1 : 0);

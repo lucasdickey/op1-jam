@@ -270,6 +270,35 @@ export interface FitOptions {
   context?: number[];
 }
 
+/** A same-note restart this soon after a note stopped may be a dropout… */
+const DROPOUT_MS = 60;
+/** …if it starts this far off the grid, in steps, where nobody meant a new note. */
+const OFF_GRID = 0.25;
+
+/**
+ * Join a note to the one before when the sound only dropped out: the same
+ * note, back within DROPOUT_MS, starting well between steps. A repeated note
+ * the person sang ("da da") starts near a step and stays separate.
+ */
+function bridgeDropouts(raw: RawNote[], start: number, stepMs: number): RawNote[] {
+  const out: RawNote[] = [];
+  for (const r of [...raw].sort((a, b) => a.start - b.start)) {
+    const prev = out[out.length - 1];
+    const at = (r.start - start) / stepMs;
+    if (
+      prev &&
+      Math.round(prev.pitch) === Math.round(r.pitch) &&
+      r.start - prev.end < DROPOUT_MS &&
+      Math.abs(at - Math.round(at)) > OFF_GRID
+    ) {
+      prev.end = Math.max(prev.end, r.end);
+      continue;
+    }
+    out.push({ ...r });
+  }
+  return out;
+}
+
 export interface HumTake {
   pattern: Pattern;
   key: Key;
@@ -282,7 +311,7 @@ export interface HumTake {
 export function fitHum(raw: RawNote[], opts: FitOptions): HumTake {
   const total = opts.bars * STEPS_PER_BAR;
   const placed: { step: number; length: number; pitch: number }[] = [];
-  for (const r of raw) {
+  for (const r of bridgeDropouts(raw, opts.start, opts.stepMs)) {
     let step = Math.round((r.start - opts.start) / opts.stepMs);
     const end = Math.round((r.end - opts.start) / opts.stepMs);
     if (step < 0) step = 0;

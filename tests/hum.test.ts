@@ -100,6 +100,27 @@ check("a bass line hummed high moves down into the bass range", bass.pattern.not
 const low = fitHum([{ start: 0, end: 500, pitch: 48 }, { start: 500, end: 1000, pitch: 52 }], { start: 0, stepMs: 125, bars: 1, part: "lead" });
 check("a lead hummed low moves up an octave", low.pattern.notes.map((n) => n.note), [60, 64]);
 
+// A held E that dropped out for 25 ms mid-note (as a busy Mac's audio can),
+// next to two E's sung "da da" on the beat.
+const dropped = fitHum(
+  [
+    { start: 500, end: 690, pitch: 64 },
+    { start: 715, end: 870, pitch: 64.1 },
+    { start: 1000, end: 1110, pitch: 64 },
+    { start: 1125, end: 1240, pitch: 64 },
+  ],
+  { start: 500, stepMs: 125, bars: 1, part: "lead" },
+);
+check(
+  "a dropout mid-note doesn't split it; a sung repeat does",
+  dropped.pattern.notes,
+  [
+    { step: 0, note: 64, length: 3 },
+    { step: 4, note: 64, length: 1 },
+    { step: 5, note: 64, length: 1 },
+  ],
+);
+
 const late = fitHum([{ start: 0, end: 400, pitch: 60 }, { start: 2100, end: 2500, pitch: 62 }], { start: 0, stepMs: 125, bars: 1, part: "lead" });
 check("notes past the loop are dropped", late.pattern.notes.length, 1);
 

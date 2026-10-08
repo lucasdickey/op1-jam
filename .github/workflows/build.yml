@@ -31,6 +31,14 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Keep the failed test's Debug Mode capture
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: ignore
+
       - name: Build the .dmg files
         run: npm run dist
         env:
