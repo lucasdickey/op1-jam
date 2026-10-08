@@ -7,7 +7,7 @@
 // is needed. On a Mac the key handlers are stubbed too, so the test never
 // touches your Keychain; elsewhere the real encrypted storage is exercised.
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -97,7 +97,7 @@ await page.waitForLoadState("domcontentloaded");
 check("window title", (await page.title()) === "OP-1 Jam");
 check("served from the app's own scheme", page.url() === "op1://app/index.html", page.url());
 const bridge = await page.evaluate(() => Object.keys(window.op1Native ?? {}).sort().join(","));
-check("the bridge offers exactly its functions", bridge === "cancelPattern,clearKey,hasKey,onShowKeySetup,setKey,setPlaying,writePattern", bridge);
+check("the bridge offers exactly its functions", bridge === "cancelPattern,clearKey,hasKey,onShowKeySetup,onToggleDebug,saveDebug,setKey,setPlaying,writePattern", bridge);
 check("no Node or Electron in the page", await page.evaluate(() => typeof require === "undefined" && typeof process === "undefined"));
 check("MIDI is allowed without asking", (await page.evaluate(() => navigator.permissions.query({ name: "midi" }).then((p) => p.state))) === "granted");
 check("the page can't reach the internet", (await page.evaluate(() => fetch("https://example.com").then(() => "reached", () => "blocked"))) === "blocked");
@@ -232,6 +232,35 @@ const where = played.map((m) => [((Math.round((m.t - bar1) / humStep) % 16) + 16
 const wantAt = { 0: 62, 4: 64, 8: 65, 12: 69 };
 check("the OP-1 plays it back on the beat", where.length >= 4 && where.every(([step, note]) => wantAt[step] === note), JSON.stringify(where));
 check("starting soon after the humming ends", played.length > 0 && played[0].t - (bar1 + 16 * humStep) < 16 * humStep * 0.5, played.length ? String(Math.round(played[0].t - bar1 - 16 * humStep)) + " ms" : "none");
+
+/* --- Debug Mode ------------------------------------------------------------ */
+
+await app.evaluate(({ shell }) => {
+  globalThis.__shown = [];
+  shell.showItemInFolder = (p) => globalThis.__shown.push(p);
+});
+const clickMenu = (label) =>
+  app.evaluate(({ Menu }, label) => Menu.getApplicationMenu().items.find((i) => i.label === "View").submenu.items.find((i) => i.label === label).click(), label);
+check("Debug Mode is off to start", (await page.getByRole("region", { name: "Debug" }).count()) === 0);
+await clickMenu("Debug Mode");
+check("View → Debug Mode shows the panel", await until(() => page.getByRole("region", { name: "Debug" }).isVisible()));
+check("with the last hum take drawn", await page.getByRole("img", { name: "Pitch trace of the last take" }).isVisible());
+const debugText = await page.getByRole("region", { name: "Debug" }).innerText();
+check("and the state and log", /"tempo": 120/.test(debugText) && /hum-take/.test(debugText), debugText.slice(0, 200));
+await page.getByLabel("Debug comment").fill("The F came out sharp");
+await page.getByRole("button", { name: "Save capture" }).click();
+check("Save capture writes a file and shows it in Finder", await until(async () => (await app.evaluate(() => globalThis.__shown.length)) === 1));
+const files = readdirSync(join(userData, "debug"));
+const capture = JSON.parse(readFileSync(join(userData, "debug", files[0]), "utf8"));
+check("the capture has the comment", capture.comment === "The F came out sharp");
+check("the app's version and the page's state", capture.app?.version === "0.1.0" && capture.state?.transport?.tempo === 120);
+check("the log", capture.events.some((e) => e.kind === "hum-take"));
+check("and the take's mic readings, to replay it", capture.takes.at(-1)?.frames.length > 100 && capture.takes.at(-1)?.outcome === "ok");
+await page.reload();
+await page.waitForLoadState("domcontentloaded");
+check("Debug Mode stays on after a reload", await until(() => page.getByRole("region", { name: "Debug" }).isVisible()));
+await clickMenu("Debug Mode");
+check("and turns off again", await until(async () => (await page.getByRole("region", { name: "Debug" }).count()) === 0));
 
 check("no page errors", problems.length === 0, problems.slice(0, 2).join(" | "));
 await app.close();

@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { release } from "node:os";
 import { join, normalize, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -152,6 +154,29 @@ ipcMain.handle("op1:key-clear", (event) => {
   if (fromApp(event)) clearKey();
 });
 
+/* --- Debug Mode captures --------------------------------------------------- */
+
+// A capture is the page's state, its recent log, the last hum takes' mic
+// readings (numbers, never sound) and the person's comment. It goes to a
+// folder of its own and is shown in Finder, to attach to a bug report.
+const MAX_CAPTURE = 20 * 1024 * 1024;
+
+ipcMain.handle("op1:debug-save", (event, report: unknown) => {
+  if (!fromApp(event) || typeof report !== "string") throw new Error("Not allowed.");
+  if (report.length > MAX_CAPTURE) throw new Error("That capture is too big to save.");
+  const page = JSON.parse(report) as Record<string, unknown>;
+  const capture = {
+    app: { version: app.getVersion(), electron: process.versions.electron, os: `${process.platform} ${release()}`, arch: process.arch },
+    ...page,
+  };
+  const dir = join(app.getPath("userData"), "debug");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `capture-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+  writeFileSync(file, JSON.stringify(capture, null, 1));
+  shell.showItemInFolder(file);
+  return file;
+});
+
 /* --- staying awake while a loop plays -------------------------------------- */
 
 // The loop stops if the Mac goes to sleep. While it plays, keep the system
@@ -229,7 +254,26 @@ function buildMenu() {
       ],
     },
     { role: "editMenu" },
-    { role: "viewMenu" },
+    {
+      label: "View",
+      submenu: [
+        {
+          label: "Debug Mode",
+          accelerator: "CmdOrCtrl+Shift+D",
+          click: () => win?.webContents.send("op1:toggle-debug"),
+        },
+        { type: "separator" },
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
     { role: "windowMenu" },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

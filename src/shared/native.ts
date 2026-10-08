@@ -23,6 +23,13 @@ export interface Op1Native {
   clearKey(): Promise<void>;
   /** The app menu's "Claude Key…" item. Returns a function that stops listening. */
   onShowKeySetup(listener: () => void): () => void;
+  /** View → Debug Mode. Returns a function that stops listening. */
+  onToggleDebug(listener: () => void): () => void;
+  /**
+   * Save a Debug Mode capture (JSON) to the app's debug folder and show it in
+   * Finder. Resolves with where it went.
+   */
+  saveDebug(report: string): Promise<string>;
 }
 
 declare global {

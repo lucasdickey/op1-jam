@@ -1,5 +1,6 @@
 import { STEPS_PER_BAR, type LoopBars, type Part } from "../../shared/types";
-import { fitHum, noiseGate, segment, type HumFrame, type HumTake } from "../../shared/hum";
+import { fitHum, noiseGate, segment, type HumFrame, type HumTake, type RawNote } from "../../shared/hum";
+import { debugTake } from "./debug";
 import { Mic, MicError } from "./mic";
 import type { Player } from "./player";
 
@@ -48,6 +49,23 @@ export async function recordHum(player: Player, opts: HumOptions): Promise<HumTa
   const mic = await Mic.open((f) => frames.push(f));
   const wasPlaying = player.playing;
   let handed = false;
+  // For Debug Mode: every reading and decision, saved however the take ends.
+  const record = {
+    at: new Date().toISOString(),
+    part: opts.part,
+    bars: opts.bars,
+    tempo: Math.round(60000 / (player.stepMs() * 4)),
+    context: opts.context,
+    start: 0,
+    end: 0,
+    stepMs: player.stepMs(),
+    gate: 0,
+    mic: mic.timing,
+    frames,
+    raw: [] as RawNote[],
+    take: null as HumTake | null,
+    outcome: "cancelled",
+  };
 
   try {
     if (opts.signal.aborted) throw abortError();
@@ -69,15 +87,17 @@ export async function recordHum(player: Player, opts: HumOptions): Promise<HumTa
     const start = player.barAfter(performance.now() + barMs + room)!;
     const end = start + opts.bars * barMs;
     player.setClick(start - barMs, end);
+    Object.assign(record, { start, end, stepMs });
 
-    const fit = (upTo: number) =>
-      fitHum(
-        segment(
-          frames.filter((f) => f.time >= start - stepMs / 2 && f.time < upTo),
-          noiseGate(frames.filter((f) => f.time < start - stepMs)),
-        ),
-        { start, stepMs, bars: opts.bars, part: opts.part, context: opts.context },
+    const fit = (upTo: number) => {
+      const gate = noiseGate(frames.filter((f) => f.time < start - stepMs));
+      const raw = segment(
+        frames.filter((f) => f.time >= start - stepMs / 2 && f.time < upTo),
+        gate,
       );
+      Object.assign(record, { gate, raw });
+      return fitHum(raw, { start, stepMs, bars: opts.bars, part: opts.part, context: opts.context });
+    };
 
     // Count in, then hum, redrawing as it goes.
     while (performance.now() < end + TAIL_MS) {
@@ -91,18 +111,24 @@ export async function recordHum(player: Player, opts: HumOptions): Promise<HumTa
     }
 
     const take = fit(end);
+    record.take = take;
     if (take.pattern.notes.length === 0) {
       throw new HumError("Didn't hear a tune. Hum closer to the Mac, or sing “da da da”.");
     }
     player.loadFrom(take.pattern, start);
     handed = true;
+    record.outcome = "ok";
     opts.onProgress({ phase: "done", beat: 0, take, start, stepMs });
     return take;
   } catch (err) {
+    if (!(err instanceof DOMException && err.name === "AbortError")) {
+      record.outcome = err instanceof Error ? err.message : String(err);
+    }
     if (err instanceof MicError) throw new HumError(err.message);
     throw err;
   } finally {
     mic.close();
+    debugTake({ ...record, frames: [...frames] });
     if (!handed) {
       player.setClick(Infinity, -Infinity);
       player.setMuted(false);

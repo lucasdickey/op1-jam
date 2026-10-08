@@ -79,6 +79,15 @@ export class Mic {
     }
   }
 
+  /** The numbers the timing correction uses, for Debug Mode. */
+  get timing() {
+    return {
+      sampleRate: this.ctx.sampleRate,
+      inputMs: this.inputMs,
+      outputMs: (this.ctx.outputLatency || this.ctx.baseLatency || 0) * 1000,
+    };
+  }
+
   /** Stop listening and let go of the mic, so macOS's mic light goes out. */
   close() {
     if (this.closed) return;

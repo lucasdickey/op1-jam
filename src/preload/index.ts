@@ -19,6 +19,14 @@ const bridge: Op1Native = {
       ipcRenderer.removeListener("op1:show-key-setup", handler);
     };
   },
+  onToggleDebug: (listener) => {
+    const handler = () => listener();
+    ipcRenderer.on("op1:toggle-debug", handler);
+    return () => {
+      ipcRenderer.removeListener("op1:toggle-debug", handler);
+    };
+  },
+  saveDebug: (report) => ipcRenderer.invoke("op1:debug-save", report),
 };
 
 contextBridge.exposeInMainWorld("op1Native", bridge);
