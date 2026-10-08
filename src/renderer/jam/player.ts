@@ -22,6 +22,10 @@ const CLOCKS_PER_STEP = 24 / 4;
 const ECHO_MS = 40;
 /** Enough step marks to place a note played a few loops ago. */
 const MAX_MARKS = 1024;
+/** The click: a high note on each beat, higher on the bar line, kept short. */
+const CLICK_ACCENT = 84;
+const CLICK_BEAT = 79;
+const CLICK_MS = 40;
 
 /** A scheduled step: when it sounds, and where it is in which loop. */
 export interface StepMark {
@@ -58,6 +62,12 @@ export class Player {
   private pattern: Pattern | null = null;
   private prepared: Prepared = new Map();
   private pending: Pattern | null = null;
+  /** Set when the waiting pattern starts mid-loop: the moment its loop began. */
+  private pendingOrigin: number | null = null;
+  /** While muted the loop keeps time but plays none of its notes. */
+  private muted = false;
+  /** Click on each beat scheduled from `from` until just before `until`. */
+  private click = { from: Infinity, until: -Infinity };
 
   private stopTicker: (() => void) | null = null;
   private nextStepTime = 0;
@@ -117,12 +127,44 @@ export class Player {
    * nothing is playing yet — so the change lands on the beat.
    */
   load(pattern: Pattern) {
+    this.pendingOrigin = null;
     if (!this.playing) {
       this.use(pattern);
       this.pending = null;
     } else {
       this.pending = pattern;
     }
+  }
+
+  /**
+   * Start a pattern on the next step, as though its loop had begun at
+   * `origin` and been playing since: a hummed take picks up where the tune
+   * would be, rather than waiting for the top of a loop.
+   */
+  loadFrom(pattern: Pattern, origin: number) {
+    if (!this.playing) return this.load(pattern);
+    this.pending = pattern;
+    this.pendingOrigin = origin;
+  }
+
+  /** Drop a pattern waiting for the top of the loop. */
+  cancelPending() {
+    this.pending = null;
+    this.pendingOrigin = null;
+  }
+
+  /**
+   * Silence the pattern while keeping time, as while the person hums. It
+   * stays muted until a new pattern takes over, which then starts at the next
+   * bar line instead of waiting for the top of the loop.
+   */
+  setMuted(muted: boolean) {
+    this.muted = muted;
+  }
+
+  /** Tick each beat on the OP-1 between two moments on the page's clock. */
+  setClick(from: number, until: number) {
+    this.click = { from, until };
   }
 
   /** Forget the pattern, as on a fresh start. */
@@ -158,10 +200,13 @@ export class Player {
     this.loopEvents = [];
     this.loop = -1;
     this.step = 0;
+    this.muted = false;
+    this.click = { from: Infinity, until: -Infinity };
     // A pattern that arrived too late to play becomes the one shown and kept.
     if (this.pending) {
       this.use(this.pending);
       this.pending = null;
+      this.pendingOrigin = null;
     }
   }
 
@@ -226,6 +271,25 @@ export class Player {
     return 60000 / this.tempo / 4;
   }
 
+  /**
+   * When the first bar line at or after `time` sounds, counting on from the
+   * steps already scheduled. Null when stopped. Assumes the tempo and loop
+   * stay as they are until then.
+   */
+  barAfter(time: number): number | null {
+    const last = this.marks[this.marks.length - 1];
+    if (!this.playing || !last) return null;
+    const ms = this.stepMs();
+    const total = this.loopSteps();
+    let t = last.time;
+    let step = last.step;
+    while (t < time || step % STEPS_PER_BAR !== 0) {
+      t += ms;
+      step = (step + 1) % total;
+    }
+    return t;
+  }
+
   /* --- scheduling --------------------------------------------------------- */
 
   private tick() {
@@ -249,13 +313,26 @@ export class Player {
   }
 
   private scheduleStep(t: number, ms: number) {
+    if (this.pending && this.pendingOrigin !== null) {
+      this.use(this.pending);
+      const total = this.loopSteps();
+      const at = Math.round((t - this.pendingOrigin) / ms);
+      this.step = ((at % total) + total) % total;
+      this.pending = null;
+      this.pendingOrigin = null;
+      this.muted = false;
+      // Mid-loop there's no top of the loop to announce; the next one is.
+      if (this.step !== 0) this.loopEvents.push({ time: t, loop: this.loop, pattern: this.pattern, swapped: true });
+    }
+
     const silent = !this.pattern || this.pattern.notes.length === 0;
     const swap =
       this.pending !== null &&
-      (this.step === 0 || (silent && this.step % STEPS_PER_BAR === 0));
+      (this.step === 0 || ((silent || this.muted) && this.step % STEPS_PER_BAR === 0));
     if (swap && this.pending) {
       this.use(this.pending);
       this.pending = null;
+      this.muted = false;
       this.step = 0;
     }
 
@@ -266,8 +343,13 @@ export class Player {
 
     this.marks.push({ time: t, loop: this.loop, step: this.step });
 
-    for (const n of this.prepared.get(this.step) ?? []) {
-      this.play(n.note, t, Math.max(10, n.hold * ms * GATE));
+    if (!this.muted) {
+      for (const n of this.prepared.get(this.step) ?? []) {
+        this.play(n.note, t, Math.max(10, n.hold * ms * GATE));
+      }
+    }
+    if (this.step % 4 === 0 && t >= this.click.from - 1 && t < this.click.until - 1) {
+      this.play(this.step % STEPS_PER_BAR === 0 ? CLICK_ACCENT : CLICK_BEAT, t, CLICK_MS);
     }
 
     if (this.clock && this.output) {

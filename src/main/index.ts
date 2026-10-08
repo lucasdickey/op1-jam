@@ -11,6 +11,7 @@ import {
   protocol,
   session,
   shell,
+  systemPreferences,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
@@ -76,16 +77,30 @@ function servePage() {
   });
 }
 
-/* --- MIDI ------------------------------------------------------------------ */
+/* --- MIDI and the mic ------------------------------------------------------ */
 
 // The browser asks before letting a page use MIDI; the app already knows the
 // page is its own, so it answers yes — to plain MIDI only, not to system-
 // exclusive messages, which can rewrite a device's settings.
-function allowMidi() {
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === "midi");
+//
+// The mic is for humming a tune, and it's macOS that asks the person, the
+// first time: the page gets sound only (never the camera), and only once
+// they've said yes in the system's own dialog.
+function allowMidiAndMic() {
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
+    if (permission === "midi") return callback(true);
+    const types = "mediaTypes" in details ? (details.mediaTypes ?? []) : [];
+    if (permission !== "media" || types.length === 0 || types.some((t) => t !== "audio")) {
+      return callback(false);
+    }
+    if (process.platform !== "darwin") return callback(true);
+    if (systemPreferences.getMediaAccessStatus("microphone") === "granted") return callback(true);
+    void systemPreferences.askForMediaAccess("microphone").then(callback, () => callback(false));
   });
-  session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === "midi");
+  session.defaultSession.setPermissionCheckHandler(
+    (_wc, permission, _origin, details) =>
+      permission === "midi" || (permission === "media" && details.mediaType === "audio"),
+  );
 }
 
 /* --- Claude ---------------------------------------------------------------- */
@@ -232,7 +247,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     servePage();
-    allowMidi();
+    allowMidiAndMic();
     buildMenu();
     createWindow();
   });

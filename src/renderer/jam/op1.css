@@ -221,6 +221,17 @@
   border-color: var(--op-orange);
   color: #fff;
 }
+.op-hum {
+  min-width: 108px;
+}
+.op-hum[data-on="true"] {
+  background: var(--op-blue);
+  border-color: var(--op-blue);
+  color: #fff;
+}
+.op-hum[data-on="true"]::before {
+  background: #fff;
+}
 
 .op-field {
   display: inline-flex;
