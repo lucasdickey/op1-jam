@@ -1,11 +1,14 @@
 import { useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { Op1Demo, type Beat } from "./op1-device";
 
 // Getting started, as a short deck of cards rather than a manual: one step
 // per card, a few short lines each, and the step's own button on the card
 // where there is one (Connect, Test sound). The OP-1 steps follow teenage
 // engineering's OP-1 guide (guides/op-1/original): COM and OP-1 mode from
 // "song rendering and connectivity", sync from "tempo", recording from "tape
-// mode", sounds from "synthesizer mode" and "drum mode".
+// mode", sounds from "synthesizer mode" and "drum mode", the power switch and
+// volume from the quick start sheet. Cards about the OP-1 itself show it
+// (op1-device.tsx), with the keys to press lit in order.
 
 /* --- remembered "hide the steps" ------------------------------------------ */
 
@@ -50,6 +53,8 @@ interface Slide {
   title: string;
   optional?: boolean;
   points: ReactNode[];
+  /** Keys to press on the OP-1, played on a drawing of it. */
+  demo?: Beat[];
 }
 
 export interface StepsProps {
@@ -82,23 +87,27 @@ export default function Steps({
     {
       title: "Plug in the OP-1",
       points: [
-        "Use a USB to mini-USB cable that carries data, not just charge.",
-        "Switch the OP-1 on.",
-        "The sound comes out of the OP-1, so plug headphones or speakers into it.",
+        "Use a USB to mini-USB cable that carries data, not just charge. Plug it into the OP-1 first, then the Mac.",
+        "Plug headphones into the OP-1: the sound comes out of it, and with headphones the Mac’s mic hears only you when you hum.",
+      ],
+      demo: [
+        { say: "Slide the power switch on the right edge toward you", press: ["power"], screen: "reels" },
+        { say: "Turn the volume up: the knob left of the screen", press: ["volume"], screen: "reels" },
       ],
     },
     {
       title: "Put it in OP-1 mode",
       points: [
+        "OP-1 mode plays notes sent over USB and sends the keys you play back, on MIDI channel 1.",
         <>
-          Press <kbd>shift</kbd> + <kbd>album</kbd>.
+          Not <kbd>T3</kbd>: that’s disk mode, and the app can’t see it. <kbd>T2</kbd> is controller
+          mode, which doesn’t play the notes it’s sent.
         </>,
-        <>
-          Then press <kbd>T1</kbd>.
-        </>,
-        <>
-          Not <kbd>T3</kbd>: that’s disk mode, and the page can’t see it.
-        </>,
+      ],
+      demo: [
+        { say: <>Hold <kbd>shift</kbd></>, hold: ["shift"], screen: "reels", ms: 1200 },
+        { say: <>…and press <kbd>album</kbd>: COM opens</>, hold: ["shift"], press: ["com"], screen: "com", ms: 2000 },
+        { say: <>Press <kbd>T1</kbd> for OP-1 mode</>, press: ["t1"], screen: "op1", ms: 2200 },
       ],
     },
     {
@@ -134,7 +143,6 @@ export default function Steps({
     {
       title: "Check you can hear it",
       points: [
-        "On the OP-1, press the blue wave key and pick a sound with 1–8.",
         <>
           <button
             type="button"
@@ -146,7 +154,12 @@ export default function Steps({
           </button>{" "}
           <span className="op-dim">three rising notes</span>
         </>,
-        "Silent? Turn the OP-1’s volume up.",
+        "Silent? Turn the OP-1’s volume up, and check Channel below matches the OP-1’s (1 unless you changed it).",
+      ],
+      demo: [
+        { say: "Press the synth key", press: ["synth"], screen: "synth" },
+        { say: <>Pick a sound with <kbd>1</kbd>–<kbd>8</kbd></>, press: ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"], screen: "synth" },
+        { say: "Play a key to hear it", press: ["piano"], screen: "synth" },
       ],
     },
     {
@@ -158,25 +171,40 @@ export default function Steps({
       ],
     },
     {
+      title: "Hum a tune",
+      optional: true,
+      points: [
+        "Wear headphones plugged into the OP-1, so the mic hears only you.",
+        "Pick the part and loop length, then press Hum. The OP-1 clicks a bar to count you in.",
+        "Hum while it keeps clicking. Sing “da da da” rather than “mmm” for clear notes.",
+        "The OP-1 plays your tune back. Hum again to redo it.",
+      ],
+    },
+    {
       title: "Drums",
       optional: true,
       points: [
-        "On the OP-1, press the green drum key and pick a kit with 1–8.",
         "Choose Drums below.",
         "Tap each drum key you want Claude to use. The page learns them.",
+      ],
+      demo: [
+        { say: "Press the drum key", press: ["drum"], screen: "drum" },
+        { say: <>Pick a kit with <kbd>1</kbd>–<kbd>8</kbd></>, press: ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"], screen: "drum" },
+        { say: "Tap the drum keys you want", press: ["piano"], screen: "drum" },
       ],
     },
     {
       title: "Record to tape",
       optional: true,
       points: [
-        <>
-          Press the orange tape key, then pick a track with <kbd>T1</kbd>–<kbd>T4</kbd>.
-        </>,
-        <>
-          <kbd>REC</kbd> + <kbd>play</kbd> to record, <kbd>stop</kbd> when done.
-        </>,
-        "Press “I recorded this to tape”, then pick the next part and sound.",
+        "Record the loop that’s playing onto one of the OP-1’s four tape tracks.",
+        "Then press “I recorded this to tape”, pick the next part and sound, and Claude writes around it.",
+      ],
+      demo: [
+        { say: "Press the tape key", press: ["tape"], screen: "tape" },
+        { say: <>Pick a track with <kbd>T1</kbd>–<kbd>T4</kbd></>, press: ["t1"], screen: "tape" },
+        { say: <>Hold <kbd>rec</kbd> and press <kbd>play</kbd></>, hold: ["rec"], press: ["play"], screen: "tape", ms: 2000 },
+        { say: <>Press <kbd>stop</kbd> when done</>, press: ["stop"], screen: "tape" },
       ],
     },
     {
@@ -185,7 +213,10 @@ export default function Steps({
       points: [
         "Only if you want the OP-1’s own tape or sequencers to follow the page.",
         "Tick Send clock below.",
-        "On the OP-1: tempo key, then turn the green encoder to sync.",
+      ],
+      demo: [
+        { say: "Press the tempo key", press: ["tempo"], screen: "reels" },
+        { say: "Turn the green encoder until EXT shows", press: ["green"], screen: "ext", ms: 2200 },
       ],
     },
   ];
@@ -249,7 +280,7 @@ export default function Steps({
             <span className="op-slide-num" aria-hidden="true">
               {i + 1}
             </span>
-            <div className="op-slide-body">
+            <div className={s.demo ? "op-slide-body op-slide-body-demo" : "op-slide-body"}>
               <h2 className="op-slide-title">
                 {s.title}
                 {s.optional ? <span className="op-slide-tag">optional</span> : null}
@@ -259,6 +290,9 @@ export default function Steps({
                   <li key={j}>{p}</li>
                 ))}
               </ul>
+              {s.demo ? (
+                <Op1Demo beats={s.demo} active={i === at} label={`On the OP-1: ${s.title}`} />
+              ) : null}
             </div>
           </div>
         ))}
@@ -309,8 +343,9 @@ export default function Steps({
               using it. Reload and connect again.
             </li>
             <li>
-              <strong>No sound:</strong> OP-1 volume up, Channel set to 1 (the OP-1’s default), and
-              the OP-1 in OP-1 mode, not controller mode (<kbd>T2</kbd>).
+              <strong>No sound:</strong> OP-1 volume up, and the OP-1 in OP-1 mode, not controller
+              mode (<kbd>T2</kbd>). Channel below must match the OP-1’s: 1 by default, and{" "}
+              <kbd>shift</kbd> + the blue encoder shows or changes it on the OP-1.
             </li>
             {inApp ? null : (
               <li>

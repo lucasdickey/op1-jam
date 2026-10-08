@@ -113,6 +113,18 @@ check("links open in the default browser", JSON.stringify(await app.evaluate(() 
 check("and the window stays put", page.url() === "op1://app/index.html");
 await page.getByRole("button", { name: "Not now" }).click();
 
+/* --- getting started ------------------------------------------------------- */
+
+await page.getByRole("button", { name: /^Step 2:/ }).click();
+const op1Mode = page.getByRole("figure", { name: "On the OP-1: Put it in OP-1 mode" });
+check("the OP-1 mode card draws the OP-1", await op1Mode.isVisible());
+await op1Mode.getByRole("button", { name: /album/ }).click();
+check("shift is held and album pressed", (await op1Mode.locator('[data-id="shift"]').getAttribute("data-state")) === "hold" && (await op1Mode.locator('[data-id="com"]').getAttribute("data-state")) === "press");
+check("and the screen shows COM's four choices", /COM.*OP-1.*CTRL.*DISK.*OPT/s.test(await op1Mode.locator("svg").textContent()));
+await op1Mode.getByRole("button", { name: /T1/ }).click();
+check("then T1", (await op1Mode.locator('[data-id="t1"]').getAttribute("data-state")) === "press" && /OP-1 mode/.test(await op1Mode.locator("svg").textContent()));
+await page.getByRole("button", { name: /^Step 1:/ }).click();
+
 /* --- the key --------------------------------------------------------------- */
 
 if (process.platform === "darwin") {
@@ -207,7 +219,7 @@ await page.getByRole("radio", { name: "1 bar" }).click();
 await page.getByLabel("Tempo in beats per minute").fill("120");
 await page.evaluate(() => { window.__voiceTempo = 120; __midi.sent = []; });
 const askedBefore = await app.evaluate(() => globalThis.__asked.length);
-await page.getByRole("button", { name: "Hum" }).click();
+await page.getByRole("button", { name: "Hum", exact: true }).click();
 check("Hum counts in", await until(async () => /Count-in/.test(await page.locator(".op-status").innerText()), 4000));
 check("then listens", await until(async () => /Hum now/.test(await page.locator(".op-status").innerText()), 4000));
 check("and turns the hum into a loop", await until(async () => /Your hum in/.test(await page.locator(".op-status").innerText()), 8000), await page.locator(".op-status").innerText());
