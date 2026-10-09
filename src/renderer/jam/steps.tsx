@@ -91,8 +91,9 @@ export default function Steps({
         "Plug headphones into the OP-1: the sound comes out of it, and with headphones the Mac’s mic hears only you when you hum.",
       ],
       demo: [
-        { say: "Slide the power switch on the right edge toward you", press: ["power"], screen: "reels" },
-        { say: "Turn the volume up: the knob left of the screen", press: ["volume"], screen: "reels" },
+        { say: "Plug the cable into the mini USB port on the right-hand end", press: ["usb"], view: "edge", ms: 2400 },
+        { say: "Slide the power switch toward you", press: ["power"], view: "edge", ms: 2400 },
+        { say: "Turn the volume up: the white knob left of the screen", press: ["volume"], screen: "reels" },
       ],
     },
     {
