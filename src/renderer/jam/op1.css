@@ -928,3 +928,251 @@
   padding-left: 0;
   list-style: none;
 }
+
+/* --- the OP-1 on the Getting started cards (op1-device.tsx) ------------- */
+
+.od-demo {
+  margin: 0;
+  max-width: 620px;
+}
+/* The 3D OP-1 draws over the flat one once it's ready; until then, and
+   without WebGL or with reduced motion, the flat one shows. */
+.od-stage {
+  position: relative;
+  aspect-ratio: 2.3;
+}
+.od {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-family: var(--op-mono);
+}
+.od-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.od-canvas:active {
+  cursor: grabbing;
+}
+.od-demo[data-3d="true"] .od {
+  visibility: hidden;
+}
+.od-demo[data-3d="false"] .od-canvas {
+  visibility: hidden;
+}
+
+/* The device is light grey in both themes, as it is in life. */
+.od-body {
+  fill: #d6d9dc;
+  stroke: #bfc3c8;
+}
+.od-tile {
+  fill: #e6e8e9;
+  stroke: #c9cdd1;
+  stroke-width: 0.6;
+}
+.od-hole {
+  fill: #8a8f96;
+}
+.od-cap {
+  fill: #f1f2f2;
+  stroke: #cfd3d6;
+  stroke-width: 0.6;
+}
+.od-cap-solid {
+  fill: #ef6a2c;
+  stroke: #ef6a2c;
+}
+.od-key text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.od-key-glyph {
+  font-size: 8px;
+}
+.od-key-word {
+  font-size: 4.6px;
+  font-weight: 600;
+}
+.od-key-sub {
+  font-size: 3.6px;
+  font-weight: 700;
+}
+.od-key {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.od-key[data-state] .od-cap {
+  stroke: #ef6a2c;
+  stroke-width: 2;
+}
+.od-key[data-state="hold"] .od-cap {
+  stroke: #2b2e34;
+}
+.od-key[data-state="press"] {
+  animation: od-press 1.6s ease-in-out infinite;
+}
+@keyframes od-press {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(0.88);
+  }
+  35% {
+    transform: scale(1);
+  }
+}
+
+.od-well {
+  fill: #cdd0d3;
+}
+.od-knob-cap {
+  stroke: #b9bdc2;
+}
+.od-knob-mark {
+  stroke: #3a3d42;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.od-knob[data-state] .od-knob-cap {
+  stroke: #ef6a2c;
+  stroke-width: 2;
+}
+.od-knob[data-state] .od-knob-turn {
+  animation: od-turn 1.6s ease-in-out infinite;
+}
+@keyframes od-turn {
+  0%,
+  100% {
+    transform: rotate(-60deg);
+  }
+  50% {
+    transform: rotate(60deg);
+  }
+}
+
+.od-pill {
+  fill: #f1f2f2;
+  stroke: #d3d6d9;
+  stroke-width: 0.6;
+}
+.od-piano[data-state] .od-pill[data-lit] {
+  fill: #ef6a2c;
+  animation: od-blink 1.6s steps(2, jump-none) infinite;
+}
+@keyframes od-blink {
+  50% {
+    fill: #f1f2f2;
+  }
+}
+.od-black {
+  fill: #141518;
+}
+
+.od-edge-body {
+  fill: #d6d9dc;
+  stroke: #bfc3c8;
+}
+.od-power-slot,
+.od-port {
+  fill: #2a2d33;
+}
+.od-power-nub {
+  fill: #f4f4f2;
+}
+.od-power[data-state] .od-power-nub {
+  animation: od-slide 1.6s ease-in-out infinite;
+}
+.od-power[data-state] .od-power-slot,
+.od-usb[data-state] .od-port {
+  stroke: #ef6a2c;
+  stroke-width: 2;
+}
+@keyframes od-slide {
+  0%,
+  20% {
+    transform: translateY(-5px);
+  }
+  55%,
+  100% {
+    transform: translateY(0);
+  }
+}
+.od-jack {
+  fill: #2a2d33;
+  stroke-width: 1.2;
+}
+.od-jack-port[data-state] .od-jack {
+  stroke: #ef6a2c !important;
+  stroke-width: 2;
+}
+
+.od-beats {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.od-beat {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 5px 10px;
+  border: 1px solid var(--op-rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--op-dim);
+  cursor: pointer;
+}
+.od-beat[aria-current="step"] {
+  border-color: var(--op-ink);
+  color: var(--op-ink);
+}
+.od-beat-n {
+  display: inline-block;
+  min-width: 1.4em;
+  font-weight: 600;
+  color: var(--op-orange);
+}
+.od-under {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+/* A card with a drawing: the words beside it when there's room. */
+.op-slide-body-demo {
+  display: grid;
+  gap: 14px 24px;
+  align-items: start;
+}
+@media (min-width: 920px) {
+  .op-slide-body-demo {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+  .op-slide-body-demo .op-slide-title {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-key[data-state="press"],
+  .od-knob[data-state] .od-knob-turn,
+  .od-piano[data-state] .od-pill[data-lit],
+  .od-power[data-state] .od-power-nub {
+    animation: none;
+  }
+}
