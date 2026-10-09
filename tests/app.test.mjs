@@ -7,7 +7,7 @@
 // is needed. On a Mac the key handlers are stubbed too, so the test never
 // touches your Keychain; elsewhere the real encrypted storage is exercised.
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,6 +44,43 @@ function fakeMidi() {
   log.keyUp = (note) => inp.onmidimessage?.({ data: new Uint8Array([0x80, note, 0]), timeStamp: performance.now() });
 }
 
+// A stand-in voice for the mic: it waits for the OP-1's count-in (the accented
+// clicks the app sends), then sings D4 E4 F4 A4 on the beats of the next bar,
+// "da da da" style, each note three steps long.
+function fakeVoice() {
+  Object.defineProperty(MediaDevices.prototype, "getUserMedia", {
+    configurable: true,
+    value: async () => {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      osc.setPeriodicWave(ctx.createPeriodicWave([0, 0, 0, 0], [0, 1, 0.5, 0.25]));
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      const dest = ctx.createMediaStreamDestination();
+      osc.connect(gain).connect(dest);
+      osc.start();
+      const at = (perf) => ctx.currentTime + (perf - performance.now()) / 1000;
+      const watch = setInterval(() => {
+        const accents = window.__midi.sent.filter((m) => m.d[0] === 0x90 && m.d[1] === 84);
+        if (accents.length < 2) return;
+        clearInterval(watch);
+        const bar = accents[1].t;
+        const beat = 60000 / window.__voiceTempo;
+        [62, 64, 65, 69].forEach((note, i) => {
+          const on = at(bar + i * beat);
+          const off = at(bar + i * beat + (beat * 3) / 4);
+          osc.frequency.setValueAtTime(440 * 2 ** ((note - 69) / 12), on);
+          gain.gain.setValueAtTime(0, on);
+          gain.gain.linearRampToValueAtTime(0.3, on + 0.01);
+          gain.gain.setValueAtTime(0.3, off - 0.01);
+          gain.gain.linearRampToValueAtTime(0, off);
+        });
+      }, 20);
+      return dest.stream;
+    },
+  });
+}
+
 const userData = mkdtempSync(join(tmpdir(), "op1-jam-test-"));
 const app = await _electron.launch({
   executablePath: electronPath,
@@ -60,7 +97,7 @@ await page.waitForLoadState("domcontentloaded");
 check("window title", (await page.title()) === "OP-1 Jam");
 check("served from the app's own scheme", page.url() === "op1://app/index.html", page.url());
 const bridge = await page.evaluate(() => Object.keys(window.op1Native ?? {}).sort().join(","));
-check("the bridge offers exactly its functions", bridge === "cancelPattern,clearKey,hasKey,onShowKeySetup,setKey,setPlaying,writePattern", bridge);
+check("the bridge offers exactly its functions", bridge === "cancelPattern,clearKey,hasKey,onShowKeySetup,onToggleDebug,saveDebug,setKey,setPlaying,writePattern", bridge);
 check("no Node or Electron in the page", await page.evaluate(() => typeof require === "undefined" && typeof process === "undefined"));
 check("MIDI is allowed without asking", (await page.evaluate(() => navigator.permissions.query({ name: "midi" }).then((p) => p.state))) === "granted");
 check("the page can't reach the internet", (await page.evaluate(() => fetch("https://example.com").then(() => "reached", () => "blocked"))) === "blocked");
@@ -128,6 +165,7 @@ await app.evaluate(({ ipcMain, powerSaveBlocker }) => {
 });
 
 await page.addInitScript(fakeMidi);
+await page.addInitScript(fakeVoice);
 await page.reload();
 await page.waitForLoadState("domcontentloaded");
 check("connects to the OP-1 without a click", await until(async () => (await page.getByLabel("Send to").inputValue()) === "out-1"));
@@ -161,8 +199,74 @@ check("no notes left sounding after Stop", [...held.values()].every((v) => v ===
 const awake = await app.evaluate(() => globalThis.__awake);
 check("Play keeps the Mac awake and Stop lets it sleep", JSON.stringify(awake) === '["start:prevent-app-suspension","stop"]', JSON.stringify(awake));
 
+/* --- humming --------------------------------------------------------------- */
+
+check("the mic is allowed for sound", (await page.evaluate(() => navigator.permissions.query({ name: "microphone" }).then((p) => p.state))) === "granted");
+await page.getByRole("radio", { name: "Lead" }).click();
+await page.getByRole("radio", { name: "1 bar" }).click();
+await page.getByLabel("Tempo in beats per minute").fill("120");
+await page.evaluate(() => { window.__voiceTempo = 120; __midi.sent = []; });
+const askedBefore = await app.evaluate(() => globalThis.__asked.length);
+await page.getByRole("button", { name: "Hum" }).click();
+check("Hum counts in", await until(async () => /Count-in/.test(await page.locator(".op-status").innerText()), 4000));
+check("then listens", await until(async () => /Hum now/.test(await page.locator(".op-status").innerText()), 4000));
+check("and turns the hum into a loop", await until(async () => /Your hum in/.test(await page.locator(".op-status").innerText()), 8000), await page.locator(".op-status").innerText());
+const status = await page.locator(".op-status").innerText();
+check("the tune as sung", /D4 E4 F4 A4/.test(status), status);
+check("in its key", /D minor|F major/.test(status), status);
+check("the hum is on the screen", (await page.locator(".op-hit").count()) === 4);
+check("and keeps looping rather than being rewritten", (await page.getByLabel("Keep changing").inputValue()) === "0");
+check("Claude wasn't asked while humming", (await app.evaluate(() => globalThis.__asked.length)) === askedBefore);
+await sleep(2500);
+await page.locator(".op-play").click();
+await sleep(300);
+const humSent = await page.evaluate(() => __midi.sent);
+const humOns = humSent.filter((m) => (m.d[0] & 0xf0) === 0x90 && m.d[2] > 0);
+const clicks = humOns.filter((m) => m.d[1] === 84 || m.d[1] === 79);
+check("eight clicks: a bar of count-in and a bar of humming", clicks.length === 8, String(clicks.length));
+const humStep = 60000 / 120 / 4;
+const played = humOns.filter((m) => m.d[1] !== 84 && m.d[1] !== 79);
+// The take picks up mid-bar, in step with the bars it was hummed over.
+const bar1 = clicks.filter((m) => m.d[1] === 84)[1]?.t ?? 0;
+const where = played.map((m) => [((Math.round((m.t - bar1) / humStep) % 16) + 16) % 16, m.d[1]]);
+const wantAt = { 0: 62, 4: 64, 8: 65, 12: 69 };
+check("the OP-1 plays it back on the beat", where.length >= 4 && where.every(([step, note]) => wantAt[step] === note), JSON.stringify(where));
+check("starting soon after the humming ends", played.length > 0 && played[0].t - (bar1 + 16 * humStep) < 16 * humStep * 0.5, played.length ? String(Math.round(played[0].t - bar1 - 16 * humStep)) + " ms" : "none");
+
+/* --- Debug Mode ------------------------------------------------------------ */
+
+await app.evaluate(({ shell }) => {
+  globalThis.__shown = [];
+  shell.showItemInFolder = (p) => globalThis.__shown.push(p);
+});
+const clickMenu = (label) =>
+  app.evaluate(({ Menu }, label) => Menu.getApplicationMenu().items.find((i) => i.label === "View").submenu.items.find((i) => i.label === label).click(), label);
+check("Debug Mode is off to start", (await page.getByRole("region", { name: "Debug" }).count()) === 0);
+await clickMenu("Debug Mode");
+check("View → Debug Mode shows the panel", await until(() => page.getByRole("region", { name: "Debug" }).isVisible()));
+check("with the last hum take drawn", await page.getByRole("img", { name: "Pitch trace of the last take" }).isVisible());
+const debugText = await page.getByRole("region", { name: "Debug" }).innerText();
+check("and the state and log", /"tempo": 120/.test(debugText) && /hum-take/.test(debugText), debugText.slice(0, 200));
+await page.getByLabel("Debug comment").fill("The F came out sharp");
+await page.getByRole("button", { name: "Save capture" }).click();
+check("Save capture writes a file and shows it in Finder", await until(async () => (await app.evaluate(() => globalThis.__shown.length)) === 1));
+const files = readdirSync(join(userData, "debug"));
+const capture = JSON.parse(readFileSync(join(userData, "debug", files[0]), "utf8"));
+check("the capture has the comment", capture.comment === "The F came out sharp");
+check("the app's version and the page's state", capture.app?.version === "0.1.0" && capture.state?.transport?.tempo === 120);
+check("the log", capture.events.some((e) => e.kind === "hum-take"));
+check("and the take's mic readings, to replay it", capture.takes.at(-1)?.frames.length > 100 && capture.takes.at(-1)?.outcome === "ok");
+await page.reload();
+await page.waitForLoadState("domcontentloaded");
+check("Debug Mode stays on after a reload", await until(() => page.getByRole("region", { name: "Debug" }).isVisible()));
+await clickMenu("Debug Mode");
+check("and turns off again", await until(async () => (await page.getByRole("region", { name: "Debug" }).count()) === 0));
+
 check("no page errors", problems.length === 0, problems.slice(0, 2).join(" | "));
 await app.close();
+// A failed run keeps its Debug Mode capture (the hum take's mic readings) for
+// CI to upload, so a take that went wrong there can be replayed here.
+if (fails && existsSync(join(userData, "debug"))) cpSync(join(userData, "debug"), join(ROOT, "test-results"), { recursive: true });
 rmSync(userData, { recursive: true, force: true });
 console.log(fails ? `\n${fails} FAILED` : "\nall passed");
 process.exit(fails ? 1 : 0);

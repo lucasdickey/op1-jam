@@ -21,7 +21,11 @@ import {
   type TapeLayer,
 } from "../../shared/types";
 import { native } from "../../shared/native";
+import { describeTake, keyName } from "../../shared/hum";
 import { requestPattern } from "./ask";
+import { HumError, recordHum, type HumProgress } from "./hum";
+import { debugLog } from "./debug";
+import DebugPanel from "./debug-panel";
 import { Player, type StepMark } from "./player";
 import Steps from "./steps";
 
@@ -61,6 +65,15 @@ const MAX_PLAYED = 256;
 const MAX_DRUM_KEYS = 24;
 
 const noSubscribe = () => () => {};
+const DEBUG_KEY = "op1-jam-debug";
+
+function debugRemembered(): boolean {
+  try {
+    return localStorage.getItem(DEBUG_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 const midiSupported = () => "requestMIDIAccess" in navigator;
 /** Inside the Mac app (op1-mac), which allows MIDI without asking. */
 const runningInApp = () => native() !== null;
@@ -139,6 +152,8 @@ export default function Jam() {
   const [heard, setHeard] = useState<number[]>([]);
   const [drumKeys, setDrumKeys] = useState<number[]>([]);
   const [tape, setTape] = useState<TapeLayer[]>([]);
+  const [humming, setHumming] = useState<HumProgress | "opening" | null>(null);
+  const [debug, setDebug] = useState(debugRemembered);
 
   const playerRef = useRef<Player | null>(null);
   const accessRef = useRef<MIDIAccess | null>(null);
@@ -148,6 +163,10 @@ export default function Jam() {
   const playedRef = useRef<Played[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const askingRef = useRef(false);
+  /** The take in progress; aborting it puts everything back. */
+  const humRef = useRef<AbortController | null>(null);
+  /** Where the take's step 0 falls, for the playhead while humming. */
+  const humClockRef = useRef<{ start: number; stepMs: number } | null>(null);
   const autoPausedRef = useRef(false);
   /** Loops the playing pattern has run, counting the one sounding now. */
   const sinceRef = useRef(0);
@@ -195,9 +214,19 @@ export default function Jam() {
       tape: settings.tape,
     };
 
+    debugLog("ask", {
+      part: body.part,
+      bars: body.bars,
+      tempo: body.tempo,
+      newDirection: body.newDirection,
+      current: body.current?.notes.length ?? null,
+      heard: body.heard.length,
+      tape: body.tape.map((l) => l.part),
+    });
     try {
       const data = await requestPattern(body, ctrl.signal);
       if (abortRef.current !== ctrl) return;
+      debugLog("answer", { ms: data.ms, notes: data.pattern.notes.length, bars: data.pattern.bars, note: data.note });
 
       writtenRef.current = { part: settings.part, direction: settings.direction };
       partOf.current.set(data.pattern, settings.part);
@@ -213,6 +242,7 @@ export default function Jam() {
       setTook(data.ms);
     } catch (err) {
       if (ctrl.signal.aborted) return;
+      debugLog("ask-error", err instanceof Error ? err.message : String(err));
       setError(err instanceof Error ? err.message : String(err));
       // Don't keep asking every loop into the same failure.
       autoPausedRef.current = true;
@@ -230,7 +260,8 @@ export default function Jam() {
 
   useEffect(() => {
     const player = new Player({
-      onLoop: (_loop, pattern, swapped) => {
+      onLoop: (loop, pattern, swapped) => {
+        if (swapped) debugLog("swap", { loop, notes: pattern?.notes.length ?? null });
         if (swapped) {
           setShown(pattern);
           if (pattern) setShownPart(partOf.current.get(pattern) ?? live.current.part);
@@ -244,6 +275,7 @@ export default function Jam() {
           sinceRef.current >= n &&
           !autoPausedRef.current &&
           !askingRef.current &&
+          !humRef.current &&
           !player.waiting
         ) {
           void ask();
@@ -262,6 +294,7 @@ export default function Jam() {
     window.addEventListener("pagehide", release);
     return () => {
       window.removeEventListener("pagehide", release);
+      humRef.current?.abort();
       player.stop();
       playerRef.current = null;
     };
@@ -292,8 +325,15 @@ export default function Jam() {
     if (!playing || !el) return;
     let raf = 0;
     const frame = () => {
-      const mark = playerRef.current?.positionAt(performance.now());
-      el.style.setProperty("--playhead", mark ? String(mark.step) : "-1");
+      const now = performance.now();
+      const hum = humClockRef.current;
+      const mark = playerRef.current?.positionAt(now);
+      const step = hum
+        ? now >= hum.start
+          ? Math.floor((now - hum.start) / hum.stepMs)
+          : -1
+        : (mark?.step ?? -1);
+      el.style.setProperty("--playhead", String(step));
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -320,6 +360,7 @@ export default function Jam() {
       if (player?.isEcho(note, t)) return;
       lastInRef.current = performance.now();
       const mark = player?.playing ? player.locate(t) : null;
+      debugLog("key", { note: noteName(note), step: mark?.step ?? null, loop: mark?.loop ?? null });
       const played = playedRef.current;
       played.push({ note, on: t, off: null, mark });
       if (played.length > MAX_PLAYED) played.splice(0, played.length - MAX_PLAYED);
@@ -351,6 +392,8 @@ export default function Jam() {
   function stopPlaying() {
     const player = playerRef.current;
     if (!player) return;
+    debugLog("stop");
+    humRef.current?.abort();
     player.stop();
     native()?.setPlaying(false);
     forgetTiming();
@@ -366,6 +409,7 @@ export default function Jam() {
     if (!player || !outputIdRef.current) return;
     forgetTiming();
     sinceRef.current = 0;
+    debugLog("play", { tempo: live.current.tempo, clock: live.current.clock });
     player.start();
     if (!player.playing) return;
     native()?.setPlaying(true);
@@ -379,6 +423,7 @@ export default function Jam() {
 
   function chooseOutput(id: string) {
     const port = id ? (accessRef.current?.outputs.get(id) ?? null) : null;
+    debugLog("output", port?.name ?? null);
     outputIdRef.current = port ? id : "";
     setOutputId(port ? id : "");
     if (!port && playerRef.current?.playing) stopPlaying();
@@ -388,6 +433,7 @@ export default function Jam() {
   function chooseInput(id: string) {
     if (inputRef.current) inputRef.current.onmidimessage = null;
     const port = id ? (accessRef.current?.inputs.get(id) ?? null) : null;
+    debugLog("input", port?.name ?? null);
     inputRef.current = port;
     if (port) port.onmidimessage = onMessage;
     inputIdRef.current = port ? id : "";
@@ -441,6 +487,96 @@ export default function Jam() {
     return () => clearTimeout(id);
   }, [inApp]);
 
+  /* --- humming ----------------------------------------------------------- */
+
+  /** Stop waiting on Claude: a take is about to replace whatever it writes. */
+  function cancelAsk() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    askingRef.current = false;
+    setAsking(false);
+  }
+
+  async function hum() {
+    const player = playerRef.current;
+    if (humRef.current) {
+      humRef.current.abort();
+      return;
+    }
+    if (!player || !outputIdRef.current || part === "drums") return;
+    cancelAsk();
+    const ctrl = new AbortController();
+    humRef.current = ctrl;
+    setHumming("opening");
+    setError(null);
+    setWaiting(false);
+
+    // The key comes from what's already in play, except drums, whose notes
+    // are samples rather than pitches.
+    const current = player.current;
+    const context = [
+      ...(current && partOf.current.get(current) !== "drums" ? current.notes.map((n) => n.note) : []),
+      ...tape.filter((l) => l.part !== "drums").flatMap((l) => l.pattern.notes.map((n) => n.note)),
+    ];
+    const humPart = part;
+    let started = player.playing;
+    let phase = "";
+    debugLog("hum", { part: humPart, bars, tempo, playing: player.playing, context: context.length });
+
+    try {
+      const take = await recordHum(player, {
+        bars,
+        part: humPart,
+        context,
+        signal: ctrl.signal,
+        onProgress: (progress) => {
+          if (player.playing && !started) {
+            started = true;
+            native()?.setPlaying(true);
+            setPlaying(true);
+          }
+          if (progress.phase !== phase) {
+            phase = progress.phase;
+            debugLog(`hum-${phase}`, { start: Math.round(progress.start), stepMs: progress.stepMs });
+          }
+          humClockRef.current = progress.phase === "hum" ? progress : null;
+          setHumming(progress);
+          if (progress.take) {
+            setShown(progress.take.pattern);
+            setShownPart(humPart);
+          }
+        },
+      });
+      debugLog("hum-take", { key: keyName(take.key), notes: describeTake(take) });
+      partOf.current.set(take.pattern, humPart);
+      // Claude's next loop for this part is a variation on the hum.
+      writtenRef.current = { part: humPart, direction: live.current.direction };
+      // Keep the hum looping until the person asks Claude for more.
+      setEvery(0);
+      setLine(
+        `Your hum in ${keyName(take.key)}: ${describeTake(take)}. Hum again to redo it, or put it on tape and have Claude write under it.`,
+      );
+      setTook(null);
+    } catch (err) {
+      const cancelled = err instanceof DOMException && err.name === "AbortError";
+      debugLog(cancelled ? "hum-cancelled" : "hum-error", cancelled ? undefined : String(err));
+      if (!cancelled) {
+        setError(err instanceof HumError ? err.message : `Humming failed: ${String(err)}`);
+      }
+      const shownNow = player.waiting ?? player.current;
+      setShown(shownNow);
+      if (shownNow) setShownPart(partOf.current.get(shownNow) ?? live.current.part);
+    } finally {
+      if (humRef.current === ctrl) humRef.current = null;
+      humClockRef.current = null;
+      setHumming(null);
+      if (!player.playing) {
+        native()?.setPlaying(false);
+        setPlaying(false);
+      }
+    }
+  }
+
   /* --- controls ----------------------------------------------------------- */
 
   function askNow() {
@@ -459,6 +595,59 @@ export default function Jam() {
   function recordToTape() {
     if (!shown || tape.length >= MAX_TAPE) return;
     setTape([...tape, { part: shownPart, pattern: shown }]);
+  }
+
+  /* --- Debug Mode --------------------------------------------------------- */
+
+  function showDebug(on: boolean) {
+    setDebug(on);
+    debugLog("debug-mode", on);
+    try {
+      localStorage.setItem(DEBUG_KEY, on ? "1" : "0");
+    } catch {
+      // Not remembered; it still works for this session.
+    }
+  }
+
+  const showDebugRef = useRef(showDebug);
+  useEffect(() => {
+    showDebugRef.current = showDebug;
+  });
+  const debugRef = useRef(debug);
+  useEffect(() => {
+    debugRef.current = debug;
+  });
+  useEffect(() => native()?.onToggleDebug(() => showDebugRef.current(!debugRef.current)), []);
+
+  /** Everything the page knows right now, for the debug panel and captures. */
+  function debugState(): Record<string, unknown> {
+    const player = playerRef.current;
+    return {
+      midi: {
+        access,
+        output: outputs.find((p) => p.id === outputId)?.name ?? null,
+        input: inputs.find((p) => p.id === inputId)?.name ?? null,
+        outputs: outputs.map((p) => p.name),
+        inputs: inputs.map((p) => p.name),
+        channel,
+      },
+      transport: { playing, tempo, clock },
+      claude: { part, bars, direction, every, asking, waiting, autoPaused, line, took, error },
+      screen: { part: shownPart, pattern: shown },
+      player: player
+        ? {
+            playing: player.playing,
+            loop: player.loopNow,
+            stepMs: Math.round(player.stepMs() * 100) / 100,
+            current: player.current,
+            waiting: player.waiting,
+          }
+        : null,
+      humming: humming === null || humming === "opening" ? humming : { phase: humming.phase, beat: humming.beat },
+      heard: heard.map(noteName),
+      drumKeys,
+      tape: tape.map((l) => ({ part: l.part, pattern: l.pattern })),
+    };
   }
 
   /* --- render ------------------------------------------------------------- */
@@ -579,6 +768,22 @@ export default function Jam() {
         >
           {playing ? "■ Stop" : "▶ Play"}
         </button>
+        <button
+          type="button"
+          className="op-key op-key-blue op-hum"
+          data-on={humming !== null}
+          onClick={hum}
+          disabled={!outputId || (part === "drums" && humming === null)}
+          title={part === "drums" ? "Hum a bass, chords, lead or arpeggio part" : undefined}
+        >
+          {humming === null
+            ? "Hum"
+            : humming === "opening"
+              ? "Mic…"
+              : humming.phase === "count"
+                ? `Count ${humming.beat}`
+                : "Cancel"}
+        </button>
         <label className="op-field op-tempo">
           <span>Tempo</span>
           <input
@@ -622,6 +827,16 @@ export default function Jam() {
       <p className="op-status" aria-live="polite">
         {error ? (
           <span className="op-warn">{error}</span>
+        ) : humming !== null ? (
+          <span className="op-busy">
+            {humming === "opening"
+              ? "Opening the mic…"
+              : humming.phase === "count"
+                ? `Count-in… ${humming.beat}`
+                : humming.phase === "hum"
+                  ? `Hum now: bar ${humming.beat} of ${bars}. Sing “da da da” for clear notes.`
+                  : "Got it."}
+          </span>
         ) : asking ? (
           <span className="op-busy">Claude is writing the next loop…</span>
         ) : waiting ? (
@@ -635,6 +850,8 @@ export default function Jam() {
           <span className="op-dim">&nbsp;</span>
         )}
       </p>
+
+      {debug ? <DebugPanel state={debugState} onClose={() => showDebug(false)} /> : null}
 
       <div className="op-columns">
         <section className="op-panel" aria-label="What Claude writes">
@@ -692,7 +909,7 @@ export default function Jam() {
               type="button"
               className="op-key op-key-orange"
               onClick={askNow}
-              disabled={!outputId}
+              disabled={!outputId || humming !== null}
             >
               Write the next loop
             </button>

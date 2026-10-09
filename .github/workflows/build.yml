@@ -31,11 +31,22 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Keep the failed test's Debug Mode capture
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: ignore
+
       - name: Build the .dmg files
         run: npm run dist
         env:
           # Ad-hoc signed (electron-builder.yml): don't look for a Developer ID.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # electron-builder skips signing on pull requests unless told to;
+          # the ad-hoc signature uses no secrets, so sign them like any build.
+          CSC_FOR_PULL_REQUEST: "true"
 
       - name: Check what was built
         run: |

@@ -21,5 +21,7 @@ mac:
   hardenedRuntime: false
   extendInfo:
     NSHumanReadableCopyright: "One-off by Lucas Dickey"
+    # Shown when the app first asks for the mic, for humming a tune.
+    NSMicrophoneUsageDescription: "OP-1 Jam listens while you hum a tune and turns it into notes. The sound stays on your Mac."
 dmg:
   title: "OP-1 Jam"

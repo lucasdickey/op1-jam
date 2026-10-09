@@ -33,6 +33,23 @@ tape, switch to the next one, and Claude writes around what's on tape.
 Then follow the Getting started cards in the window. In short: put the OP-1 in
 OP-1 mode (shift + album, then T1), pick a sound, press Play.
 
+## Hum a tune
+
+Press **Hum** and the OP-1 counts you in with a bar of clicks. Hum a loop's
+length (1, 2 or 4 bars, from **Loop**) while it keeps clicking, and the notes
+appear as you go. The app puts the tune on the beat, in one key and in the
+selected part's octave, then the OP-1 plays it back on loop on whatever sound
+is selected. Hum again to redo it. To build on it, record it to the OP-1's
+tape, press **I recorded this to tape**, pick another part and have Claude
+write under it. **Write the next loop** with the same part selected gives a
+variation on your tune.
+
+- Wear headphones plugged into the OP-1, so the Mac's mic hears only you.
+- Sing "da da da" rather than a steady "mmm": each "d" marks where a note
+  starts. Simple tunes come out best; fast runs and slides get simplified.
+- The sound never leaves the Mac. It is turned into notes as it arrives, and
+  only the notes go to Claude. macOS asks for the mic the first time.
+
 ## How it works
 
 - **The app keeps time, not Claude.** Claude takes seconds to answer, so the
@@ -47,10 +64,10 @@ OP-1 mode (shift + album, then T1), pick a sound, press Play.
 
 | Part | Where | Does |
 | --- | --- | --- |
-| The page | `src/renderer/` | The jam: controls, the note screen, the timing (`jam/player.ts`) |
+| The page | `src/renderer/` | The jam: controls, the note screen, the timing (`jam/player.ts`), the mic (`jam/mic.ts`) |
 | The bridge | `src/preload/` | The only functions the page can call, listed in `src/shared/native.ts` |
 | The app | `src/main/` | Talks to macOS and to Claude (`claude.ts`); keeps the key |
-| Shared | `src/shared/` | The loop's types, and the prompt Claude gets (`prompt.ts`) |
+| Shared | `src/shared/` | The loop's types, the prompt Claude gets (`prompt.ts`), hum to notes (`hum.ts`) |
 
 The window is sandboxed, has Node switched off, and is blocked from the
 network; only the app's main process talks to Claude.
@@ -60,7 +77,7 @@ network; only the app's main process talks to Claude.
 ```bash
 npm install
 npm run dev          # opens the app; edits to the page reload it live
-npm test             # the prompt, then the real app with a stand-in OP-1 and Claude
+npm test             # the prompt, hum to notes, then the real app with a stand-in OP-1, Claude and voice
 npm run typecheck
 npm run dist         # builds the .dmg files into dist/
 ```
