@@ -31,7 +31,7 @@ tape, switch to the next one, and Claude writes around what's on tape.
    Mac's Keychain. **Claude Key…** in the app menu (⌘,) changes or removes it.
 
 Then follow the Getting started cards in the window. In short: put the OP-1 in
-OP-1 mode (shift + album, then T1), pick a sound, press Play.
+OP-1 mode (shift + COM, then T1), pick a sound, press Play.
 
 ## Hum a tune
 

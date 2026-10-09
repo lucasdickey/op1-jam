@@ -1108,11 +1108,11 @@
 }
 .od-jack {
   fill: #2a2d33;
-  stroke: #b5b9be;
   stroke-width: 1.2;
 }
-.od-jack-red {
-  stroke: #c8343a;
+.od-jack-port[data-state] .od-jack {
+  stroke: #ef6a2c !important;
+  stroke-width: 2;
 }
 
 .od-beats {

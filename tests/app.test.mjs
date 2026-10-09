@@ -118,14 +118,17 @@ await page.getByRole("button", { name: "Not now" }).click();
 await page.getByRole("button", { name: /^Step 2:/ }).click();
 const op1Mode = page.getByRole("figure", { name: "On the OP-1: Put it in OP-1 mode" });
 check("the OP-1 mode card draws the OP-1", await op1Mode.isVisible());
-await op1Mode.getByRole("button", { name: /album/ }).click();
-check("shift is held and album pressed", (await op1Mode.locator('[data-id="shift"]').getAttribute("data-state")) === "hold" && (await op1Mode.locator('[data-id="com"]').getAttribute("data-state")) === "press");
+await op1Mode.getByRole("button", { name: /press COM/ }).click();
+check("shift is held and COM pressed", (await op1Mode.locator('[data-id="shift"]').getAttribute("data-state")) === "hold" && (await op1Mode.locator('[data-id="com"]').getAttribute("data-state")) === "press");
 check("and the screen shows COM", (await op1Mode.locator("svg").getAttribute("data-screen")) === "com");
 await op1Mode.getByRole("button", { name: /T1/ }).click();
 check("then T1", (await op1Mode.locator('[data-id="t1"]').getAttribute("data-state")) === "press" && (await op1Mode.locator("svg").getAttribute("data-screen")) === "op1");
 const threeD = await until(async () => (await op1Mode.getAttribute("data-3d")) === "true", 5000);
 console.log(`     (the OP-1 drawn in ${threeD ? "3D" : "2D: no WebGL here"})`);
 await page.getByRole("button", { name: /^Step 1:/ }).click();
+const plugIn = page.getByRole("figure", { name: "On the OP-1: Plug in the OP-1" });
+await plugIn.getByRole("button", { name: /Headphones go in the grey jack/ }).click();
+check("the plug-in card points at the headphone jack", (await plugIn.locator('[data-id="phones"]').getAttribute("data-state")) === "press" && (await plugIn.locator('[data-id="linein"]').getAttribute("data-state")) === null);
 
 /* --- the key --------------------------------------------------------------- */
 

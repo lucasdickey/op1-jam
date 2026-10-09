@@ -168,7 +168,7 @@ export function Op1Drawing({ hold = [], press = [], screen = "reels" }: Omit<Bea
         ))}
       </g>
 
-      {/* the right-hand edge, folded out beside it: switch, USB, jacks */}
+      {/* the right-hand edge, folded out beside it: switch, USB, line in, headphones */}
       <g className="od-edge">
         <rect x={edgeX} y={M} width={12} height={ROWS * P} rx={3} className="od-edge-body" />
         <g className="od-power" data-state={state("power")} data-id="power">
@@ -180,8 +180,11 @@ export function Op1Drawing({ hold = [], press = [], screen = "reels" }: Omit<Bea
           <title>mini USB</title>
           <rect x={edgeX + 3.5} y={ez(EDGE.usb) - 3.5} width={5} height={7} rx={1} className="od-port" />
         </g>
-        {EDGE.jacks.map((at, i) => (
-          <circle key={at} cx={edgeX + 6} cy={ez(at)} r={2.6} className={i === 0 ? "od-jack od-jack-red" : "od-jack"} />
+        {EDGE.jacks.map((j) => (
+          <g key={j.id} className="od-jack-port" data-state={state(j.id)} data-id={j.id}>
+            <title>{j.name}</title>
+            <circle cx={edgeX + 6} cy={ez(j.at)} r={2.6} className="od-jack" style={{ stroke: j.ring }} />
+          </g>
         ))}
       </g>
     </svg>

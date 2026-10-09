@@ -480,17 +480,24 @@ export class Op1Scene {
     s.add(usbHalo);
     this.parts.push({ ids: ["usb"], halo: usbHalo });
 
-    // The two 3.5 mm jacks: one ringed red, one grey.
-    EDGE.jacks.forEach((at, i) => {
-      const ring = this.mesh(this.own(new CylinderGeometry(2.6, 2.6, 0.4, 32)), this.mat(i === 0 ? "#c8343a" : "#b5b9be", 0.5), false);
+    // The two 3.5 mm jacks: line in ringed red, headphones grey.
+    for (const jack of EDGE.jacks) {
+      const z = front - jack.at;
+      const ring = this.mesh(this.own(new CylinderGeometry(2.6, 2.6, 0.4, 32)), this.mat(jack.ring, 0.5), false);
       ring.rotation.z = Math.PI / 2;
-      ring.position.set(x + 0.1, y, front - at);
+      ring.position.set(x + 0.1, y, z);
       s.add(ring);
       const hole = new Mesh(this.own(new CylinderGeometry(1.8, 1.8, 0.5, 32)), dark);
       hole.rotation.z = Math.PI / 2;
-      hole.position.set(x + 0.2, y, front - at);
+      hole.position.set(x + 0.2, y, z);
       s.add(hole);
-    });
+      const halo = new Mesh(this.own(new RingGeometry(4.2, 5.4, 40)), this.haloMat);
+      halo.rotation.y = Math.PI / 2;
+      halo.position.set(x + 0.2, y, z);
+      halo.visible = false;
+      s.add(halo);
+      this.parts.push({ ids: [jack.id], halo });
+    }
   }
 
   /* --- running ------------------------------------------------------------- */

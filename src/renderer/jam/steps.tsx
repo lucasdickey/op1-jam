@@ -4,10 +4,11 @@ import { Op1Demo, type Beat } from "./op1-device";
 // Getting started, as a short deck of cards rather than a manual: one step
 // per card, a few short lines each, and the step's own button on the card
 // where there is one (Connect, Test sound). The OP-1 steps follow teenage
-// engineering's OP-1 guide (guides/op-1/original): COM and OP-1 mode from
-// "song rendering and connectivity", sync from "tempo", recording from "tape
-// mode", sounds from "synthesizer mode" and "drum mode", the power switch and
-// volume from the quick start sheet. Cards about the OP-1 itself show it
+// engineering's OP-1 guides (guides/op-1/original, and the OP-1 field user
+// guide where the two agree): COM and OP-1 mode from "song rendering and
+// connectivity", sync from "tempo", recording from "tape mode", sounds from
+// "synthesizer mode" and "drum mode", the ports from "overview", the power
+// switch and volume from the quick start sheet. Cards about the OP-1 itself show it
 // (op1-device.tsx), with the keys to press lit in order.
 
 /* --- remembered "hide the steps" ------------------------------------------ */
@@ -92,6 +93,7 @@ export default function Steps({
       ],
       demo: [
         { say: "Plug the cable into the mini USB port on the right-hand end", press: ["usb"], view: "edge", ms: 2400 },
+        { say: "Headphones go in the grey jack at the back corner. The red one is line in.", press: ["phones"], view: "edge", ms: 2600 },
         { say: "Slide the power switch toward you", press: ["power"], view: "edge", ms: 2400 },
         { say: "Turn the volume up: the white knob left of the screen", press: ["volume"], screen: "reels" },
       ],
@@ -107,7 +109,7 @@ export default function Steps({
       ],
       demo: [
         { say: <>Hold <kbd>shift</kbd></>, hold: ["shift"], screen: "reels", ms: 1200 },
-        { say: <>…and press <kbd>album</kbd>: COM opens</>, hold: ["shift"], press: ["com"], screen: "com", ms: 2000 },
+        { say: <>…and press <kbd>COM</kbd>, under the mic key: COM opens</>, hold: ["shift"], press: ["com"], screen: "com", ms: 2000 },
         { say: <>Press <kbd>T1</kbd> for OP-1 mode</>, press: ["t1"], screen: "op1", ms: 2200 },
       ],
     },
@@ -161,6 +163,7 @@ export default function Steps({
         { say: "Press the synth key", press: ["synth"], screen: "synth" },
         { say: <>Pick a sound with <kbd>1</kbd>–<kbd>8</kbd></>, press: ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"], screen: "synth" },
         { say: "Play a key to hear it", press: ["piano"], screen: "synth" },
+        { say: <><kbd>‹</kbd> and <kbd>›</kbd> shift the keyboard an octave</>, press: ["back", "fwd"], screen: "synth" },
       ],
     },
     {
@@ -179,6 +182,10 @@ export default function Steps({
         "Pick the part and loop length, then press Hum. The OP-1 clicks a bar to count you in.",
         "Hum while it keeps clicking. Sing “da da da” rather than “mmm” for clear notes.",
         "The OP-1 plays your tune back. Hum again to redo it.",
+      ],
+      demo: [
+        { say: "Headphones in the grey jack at the back corner", press: ["phones"], view: "edge", ms: 2600 },
+        { say: "Volume up enough to hear the clicks", press: ["volume"], screen: "reels" },
       ],
     },
     {
@@ -340,7 +347,7 @@ export default function Steps({
           <ul className="op-fixes">
             <li>
               <strong>OP-1 not in the list:</strong> check it’s in OP-1 mode (<kbd>shift</kbd> +{" "}
-              <kbd>album</kbd>, <kbd>T1</kbd>), the cable carries data, and no other music app is
+              <kbd>COM</kbd>, <kbd>T1</kbd>), the cable carries data, and no other music app is
               using it. Reload and connect again.
             </li>
             <li>

@@ -12,7 +12,9 @@
 //   r5  [ ‹ ][ › ][shift]  [ ...........................................]
 //
 // The right-hand edge (the short end by the keys) has, front to back: a strap
-// slot, the power switch, mini USB, two 3.5 mm jacks, another strap slot.
+// slot, the power switch, mini USB, line in (ringed red), audio out for
+// headphones (grey), another strap slot. teenage engineering's OP-1 guide
+// shows the same order on the right side: usb, audio in, audio out.
 
 export type KeyId =
   | "help" | "tempo" | "synth" | "drum" | "tape" | "mixer"
@@ -21,7 +23,7 @@ export type KeyId =
   | "mic" | "com"
   | "lift" | "drop" | "split" | "rec" | "play" | "stop" | "back" | "fwd" | "shift"
   | "piano" | "volume" | "blue" | "green" | "white" | "orange"
-  | "power" | "usb";
+  | "power" | "usb" | "linein" | "phones";
 
 /** One square key: grid position, and what's printed on it. */
 export interface KeySpec {
@@ -58,7 +60,7 @@ export const KEYS: KeySpec[] = [
   k("help", 2, 1, "?", "help"),
   k("tempo", 3, 1, "♩", "tempo (metronome)"),
   k("mic", 16, 0, "mic", "mic / input", "orange"),
-  k("com", 16, 1, "◉", "COM (album)", "dark", "COM"),
+  k("com", 16, 1, "◉", "COM", "dark", "COM"),
 
   k("synth", 0, 2, "∿", "synth", "blue"),
   k("drum", 1, 2, "◎", "drum", "green"),
@@ -116,7 +118,10 @@ export const EDGE = {
   slots: [5, 97],
   power: { at: 21, travel: 5 },
   usb: 42,
-  jacks: [59, 74],
+  jacks: [
+    { id: "linein" as const, at: 59, ring: "#c8343a", name: "audio in" },
+    { id: "phones" as const, at: 74, ring: "#b5b9be", name: "audio out (headphones)" },
+  ],
 };
 
 /** Printed-ink colours, from the photos. */
