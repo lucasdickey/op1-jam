@@ -27,18 +27,20 @@ struct Op1Demo: View {
                         at = i
                         paused = true
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text("\(i + 1)")
                                 .fontWeight(.bold)
                                 .foregroundStyle(Palette.orange)
                             Text(LocalizedStringKey(b.say))
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .font(.system(size: 12, design: .monospaced))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(Palette.key)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(i == at ? Palette.ink : Palette.rule, lineWidth: i == at ? 1.5 : 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(i == at ? Palette.ink : Palette.rule, lineWidth: i == at ? 1.5 : 1))
                     }
                     .buttonStyle(.plain)
                 }
@@ -58,9 +60,17 @@ struct Op1Demo: View {
 }
 
 /// Lays its children out in rows, wrapping like words, so the beat buttons
-/// fit whatever width the card has.
+/// fit whatever width the card has. A child too wide for a row on its own is
+/// offered the row's width instead, so its text wraps rather than running
+/// off the edge.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
+
+    private func measure(_ view: LayoutSubview, within width: CGFloat) -> CGSize {
+        let ideal = view.sizeThatFits(.unspecified)
+        guard ideal.width > width, width.isFinite else { return ideal }
+        return view.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -69,7 +79,7 @@ struct FlowLayout: Layout {
         var rowHeight: CGFloat = 0
         var maxX: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let size = measure(view, within: width)
             if x > 0 && x + size.width > width {
                 x = 0
                 y += rowHeight + spacing
@@ -87,7 +97,7 @@ struct FlowLayout: Layout {
         var y = bounds.minY
         var rowHeight: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let size = measure(view, within: bounds.width)
             if x > bounds.minX && x + size.width > bounds.maxX {
                 x = bounds.minX
                 y += rowHeight + spacing
