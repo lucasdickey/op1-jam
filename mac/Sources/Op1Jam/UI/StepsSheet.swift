@@ -13,6 +13,9 @@ struct StepsSheet: View {
     @State private var at = 0
     @State private var helpOpen = false
 
+    /// Room for the longest card: step 1, whose four demo steps wrap.
+    private let cardHeight: CGFloat = 380
+
     private var slides: [Slide] { stepSlides(connected: connected, outputName: outputName) }
 
     var body: some View {
@@ -28,16 +31,21 @@ struct StepsSheet: View {
                 LinkButton(title: "Hide", action: onDone)
             }
 
+            // One height for every card, tall enough for the longest, so the
+            // sheet keeps its size (and its place) as the cards change. A card
+            // longer than this scrolls instead.
             ScrollView {
                 StepCard(slide: slide, number: index + 1, connected: connected, onTest: onTest)
                     .id(slide.id)
             }
-            .frame(minHeight: 320)
+            .frame(height: cardHeight)
 
-            HStack {
+            // Back and Next each get half the row, so the dots stay centred
+            // whatever the buttons say ("Next →" is wider than "Done").
+            HStack(spacing: 0) {
                 Button("← Back") { go(index - 1) }
                     .disabled(index == 0)
-                Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: 8) {
                     ForEach(Array(slides.enumerated()), id: \.element.id) { i, s in
                         Button {
@@ -52,16 +60,16 @@ struct StepsSheet: View {
                         .help("Step \(i + 1): \(s.title)")
                     }
                 }
-                Spacer()
-                if index < last {
-                    Button("Next →") { go(index + 1) }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Palette.ink)
-                } else {
-                    Button("Done", action: onDone)
-                        .buttonStyle(.borderedProminent)
-                        .tint(Palette.ink)
+                Group {
+                    if index < last {
+                        Button("Next →") { go(index + 1) }
+                    } else {
+                        Button("Done", action: onDone)
+                    }
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.ink)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
             Divider()

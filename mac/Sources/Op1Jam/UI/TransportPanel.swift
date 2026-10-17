@@ -16,7 +16,7 @@ struct TransportPanel: View {
             ) { model.togglePlaying() }
                 .disabled(!model.connected)
 
-            KeyButton(title: humTitle, tone: Palette.blue, prominent: model.humming != nil) { model.hum() }
+            KeyButton(title: humTitle, tone: Palette.blue, prominent: model.humming != nil, widest: "Count 4") { model.hum() }
                 .disabled(!model.connected || (model.part == .drums && model.humming == nil))
                 .help(model.part == .drums ? "Hum a bass, chords, lead or arpeggio part" : "")
 

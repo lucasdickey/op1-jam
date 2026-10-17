@@ -128,6 +128,9 @@ struct KeyButton: View {
     var tone: Color? = nil
     /// Filled with its colour, as the page's Play key while playing.
     var prominent = false
+    /// The longest title this button ever shows. Its width is kept, so the
+    /// button doesn't change size (and move what's beside it) as it relabels.
+    var widest: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -144,7 +147,12 @@ struct KeyButton: View {
                 if let tone = tone {
                     Circle().fill(prominent ? Color.white : tone).frame(width: 8, height: 8)
                 }
-                Text(title).fontWeight(.semibold)
+                ZStack {
+                    if let widest = widest {
+                        Text(widest).fontWeight(.semibold).hidden()
+                    }
+                    Text(title).fontWeight(.semibold)
+                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

@@ -13,6 +13,7 @@ struct NoteScreen: View {
     private let laneGap: CGFloat = 2
     private let minLane: CGFloat = 14
     private let maxLane: CGFloat = 26
+    private let screenHeight: CGFloat = 240
 
     var body: some View {
         let pattern = model.shown
@@ -23,7 +24,9 @@ struct NoteScreen: View {
                      playhead: model.playing ? model.playheadStep() : -1)
             }
         }
-        .frame(height: max(150, CGFloat(keys.count) * 18 + 26))
+        // One height for any loop up to 13 keys, so a new loop doesn't move
+        // the panels below; only an unusually busy one makes it taller.
+        .frame(height: max(screenHeight, CGFloat(keys.count) * (minLane + laneGap) + 28))
         .overlay {
             if keys.isEmpty {
                 Text(pattern == nil ? model.screenNote : "This loop is silent.")

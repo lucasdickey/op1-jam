@@ -48,18 +48,23 @@ struct ClaudePanel: View {
                 }
             }
 
-            if model.autoPaused && model.every > 0 {
-                Text("Keep changing is paused after an error. Write the next loop to resume.")
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(Palette.dim)
-            }
-            if model.part != model.shownPart && model.shown != nil {
-                Text("Claude writes a new \(partLabel(model.part).lowercased()) part next time it’s asked.")
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(Palette.dim)
-            }
+            // The notices keep their place when they don't apply, so the
+            // panel (and the tape below it) doesn't jump when one comes up.
+            notice("Keep changing is paused after an error. Write the next loop to resume.",
+                   shown: model.autoPaused && model.every > 0)
+            notice("Claude writes a new \(partLabel(model.part).lowercased()) part next time it’s asked.",
+                   shown: model.part != model.shownPart && model.shown != nil)
         }
         .panel()
+    }
+
+    private func notice(_ text: String, shown: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 12, design: .monospaced))
+            .foregroundStyle(Palette.dim)
+            .fixedSize(horizontal: false, vertical: true)
+            .opacity(shown ? 1 : 0)
+            .accessibilityHidden(!shown)
     }
 
     private func everyLabel(_ n: Int) -> String {

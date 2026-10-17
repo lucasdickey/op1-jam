@@ -9,14 +9,22 @@ struct HeardPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             PanelTitle(text: "From the OP-1")
-            if model.heard.isEmpty {
-                Text("Play the OP-1’s keys. Your notes show here, and Claude answers them.")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(Palette.dim)
-            } else {
-                Text(model.heard.map { noteName($0) }.joined(separator: " "))
-                    .font(.system(size: 14, design: .monospaced))
+            // The last 16 notes fill at most two lines. Both are kept from the
+            // start, under the hint too, so the panel doesn't grow as you play.
+            ZStack(alignment: .topLeading) {
+                Text(" \n ").font(.system(size: 14, design: .monospaced)).hidden()
+                if model.heard.isEmpty {
+                    Text("Play the OP-1’s keys. Your notes show here, and Claude answers them.")
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundStyle(Palette.dim)
+                        .lineLimit(2)
+                } else {
+                    Text(model.heard.map { noteName($0) }.joined(separator: " "))
+                        .font(.system(size: 14, design: .monospaced))
+                        .lineLimit(2)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             if model.part == .drums || !model.drumKeys.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
