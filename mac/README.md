@@ -56,6 +56,10 @@ The core (`Op1Core`) is plain Swift with no Apple frameworks, so its tests
 run on a Mac or on Linux: the prompt Claude gets, hum to notes, the loop's
 types and the player's timing. The app target only builds on a Mac.
 
+On a Mac the tests need a full Xcode, not just the Command Line Tools: the
+tests use XCTest, which the Command Line Tools leave out. Building and
+bundling the app work with either.
+
 ## Environment
 
 | Variable | Does |

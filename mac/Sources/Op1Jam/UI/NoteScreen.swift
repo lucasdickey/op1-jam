@@ -39,12 +39,12 @@ struct NoteScreen: View {
     }
 
     /// The keys in the loop, highest first.
-    private func lanes(_ pattern: Pattern?) -> [Int] {
+    private func lanes(_ pattern: Op1Core.Pattern?) -> [Int] {
         guard let pattern = pattern else { return [] }
         return Array(Set(pattern.notes.map { $0.note })).sorted(by: >)
     }
 
-    private func draw(in context: inout GraphicsContext, size: CGSize, pattern: Pattern?, keys: [Int], playhead: Int) {
+    private func draw(in context: inout GraphicsContext, size: CGSize, pattern: Op1Core.Pattern?, keys: [Int], playhead: Int) {
         guard let pattern = pattern, !keys.isEmpty else { return }
         let steps = pattern.bars.steps
         let inset: CGFloat = 14

@@ -85,19 +85,19 @@ public final class MicCapture: MicCapturing {
             throw MicError("Couldn't open the microphone.")
         }
 
-        lock.lock()
-        self.engine = engine
-        self.onFrame = onFrame
-        running = true
-        sampleRate = format.sampleRate
         let reported = input.presentationLatency
-        inputSeconds = reported > 0 ? reported : defaultInputSeconds
-        ring = [Float](repeating: 0, count: window * 4)
-        count = 0
-        next = 0
-        bufferTime = 0
-        bufferFirst = 0
-        lock.unlock()
+        lock.withLock {
+            self.engine = engine
+            self.onFrame = onFrame
+            running = true
+            sampleRate = format.sampleRate
+            inputSeconds = reported > 0 ? reported : defaultInputSeconds
+            ring = [Float](repeating: 0, count: window * 4)
+            count = 0
+            next = 0
+            bufferTime = 0
+            bufferFirst = 0
+        }
 
         // The tap has to take the input's own format; only its first channel
         // is read, which makes it mono.
@@ -109,11 +109,11 @@ public final class MicCapture: MicCapturing {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
-            lock.lock()
-            self.engine = nil
-            self.onFrame = nil
-            running = false
-            lock.unlock()
+            lock.withLock {
+                self.engine = nil
+                self.onFrame = nil
+                running = false
+            }
             throw MicError("Couldn't start listening to the microphone.")
         }
     }

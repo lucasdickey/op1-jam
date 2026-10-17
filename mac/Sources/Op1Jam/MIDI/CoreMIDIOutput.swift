@@ -44,7 +44,7 @@ final class CoreMIDIOutput: MIDISink {
             guard let base = buf.baseAddress else { return }
             // The list was sized for this one packet, so the add cannot run out
             // of room; its return value (the next packet slot) is not needed.
-            _ = MIDIPacketListAdd(list, ByteCount(size), packet, stamp, ByteCount(buf.count), base)
+            _ = MIDIPacketListAdd(list, size, packet, stamp, buf.count, base)
             _ = MIDISend(port, destination, list)
         }
     }
