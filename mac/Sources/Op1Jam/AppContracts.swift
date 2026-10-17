@@ -2,6 +2,7 @@
 // on its own: the MIDI side, the Claude call, the key store and the mic
 // each implement one of these, and the jam model only ever sees the protocol.
 
+import Combine
 import Foundation
 import Op1Core
 

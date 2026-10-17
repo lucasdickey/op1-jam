@@ -61,6 +61,8 @@ variation on your tune.
 - **Electron**, because it's Chrome inside: the app reaches the OP-1 through
   Chrome's MIDI support, which Safari's engine (what Tauri and similar
   wrappers use on a Mac) doesn't have.
+  A native port (SwiftUI, CoreMIDI, AVAudioEngine; no Electron) lives in
+  [`mac/`](mac/README.md).
 
 | Part | Where | Does |
 | --- | --- | --- |

@@ -1,0 +1,68 @@
+# XcodeGen description of the same two targets Package.swift builds, for
+# people who would rather work in Xcode: `xcodegen generate` writes
+# Op1Jam.xcodeproj here (ignored by git). Sources, the Info.plist and the
+# entitlements are shared with the package, so there is one copy of each.
+name: Op1Jam
+options:
+  bundleIdPrefix: dev.one-off
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  Op1Core:
+    type: framework
+    platform: macOS
+    sources:
+      - Sources/Op1Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.one-off.op1-jam.core
+        DEFINES_MODULE: YES
+
+  Op1CoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/Op1CoreTests
+    dependencies:
+      - target: Op1Core
+
+  Op1Jam:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/Op1Jam
+    dependencies:
+      - target: Op1Core
+        embed: true
+    settings:
+      base:
+        # Point at the checked-in files rather than letting XcodeGen write
+        # its own, so the package build and Xcode agree.
+        INFOPLIST_FILE: Info.plist
+        CODE_SIGN_ENTITLEMENTS: Op1Jam.entitlements
+        PRODUCT_NAME: Op1Jam
+        PRODUCT_BUNDLE_IDENTIFIER: dev.one-off.op1-jam
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+
+schemes:
+  Op1Jam:
+    build:
+      targets:
+        Op1Jam: all
+        Op1CoreTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - Op1CoreTests

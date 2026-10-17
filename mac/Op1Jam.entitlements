@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The mic, for Hum. Nothing else: no sandbox exceptions, no network
+	     entitlement is needed outside the App Sandbox, and the app is not
+	     sandboxed so CoreMIDI can see the OP-1 without a prompt. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- Hardened runtime basics so the app runs under Gatekeeper on an ad-hoc
+	     signature. Nothing here loads plugins or JIT, so no exceptions. -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<false/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<false/>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<false/>
+</dict>
+</plist>
